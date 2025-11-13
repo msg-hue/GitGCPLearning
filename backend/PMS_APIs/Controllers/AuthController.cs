@@ -7,7 +7,6 @@ using PMS_APIs.DTOs;
 using PMS_APIs.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using System.Data;
 
@@ -112,39 +111,96 @@ namespace PMS_APIs.Controllers
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
 
-                // If a password was provided, validate against legacy plaintext first, then hash if present.
-                var providedPassword = (loginRequest.Password ?? string.Empty).Trim();
-                if (!string.IsNullOrEmpty(providedPassword))
-                {
-                var legacyPlain = await TryGetLegacyPlainPassword(user.UserId);
-                if (legacyPlain != null)
-                {
-                    // Plaintext password check (requested MVP behavior)
-                    if (!string.Equals(legacyPlain, providedPassword))
-                    {
-                        return Unauthorized(new { message = "Invalid email or password" });
-                    }
-                }
-                else if (!string.IsNullOrWhiteSpace(user.PasswordHash))
-                {
-                    // Fall back to hash verification if plaintext not available
-                    var ok = VerifyPassword(providedPassword, user.PasswordHash);
-                    if (!ok)
-                    {
-                        // Additional fallback: some databases store plaintext in password_hash
-                        // Accept login if the stored value equals the provided password exactly.
-                        if (!string.Equals(user.PasswordHash, providedPassword))
-                        {
-                            return Unauthorized(new { message = "Invalid email or password" });
-                        }
-                    }
-                }
-                // If neither plaintext nor hash is available, allow login (MVP email-only fallback)
-                }
+                
 
                 // Generate JWT token
                 var token = GenerateJwtToken(user);
                 var expiresAt = DateTime.UtcNow.AddHours(24); // Token expires in 24 hours
+
+                var response = new LoginResponseDto
+                {
+                    Token = token,
+                    ExpiresAt = expiresAt,
+                    User = new UserDto
+                    {
+                        UserId = user.UserId,
+                        FullName = user.FullName,
+                        Email = user.Email,
+                        RoleId = user.RoleId,
+                        IsActive = user.IsActive,
+                        CreatedAt = user.CreatedAt
+                    }
+                };
+
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "An error occurred during login", error = ex.Message, innerError = ex.InnerException?.Message });
+            }
+        }
+
+        [HttpGet("login")]
+        [AllowAnonymous]
+        public async Task<ActionResult<LoginResponseDto>> LoginGet([FromQuery] string email, [FromQuery] string password)
+        {
+            try
+            {
+                var normalizedEmail = (email ?? string.Empty).Trim().ToLower();
+
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => (u.Email ?? string.Empty).Trim().ToLower() == normalizedEmail);
+
+                if (user == null)
+                {
+                    try
+                    {
+                        var conn = _context.Database.GetDbConnection();
+                        await conn.OpenAsync();
+                        using var cmd = conn.CreateCommand();
+                        cmd.CommandText = @"SELECT 
+                            COALESCE(userid, user_id) AS user_id,
+                            COALESCE(fullname, full_name) AS full_name,
+                            email,
+                            COALESCE(roleid, role_id) AS role_id,
+                            COALESCE(isactive, is_active) AS is_active,
+                            COALESCE(createdat, created_at) AS created_at
+                          FROM users 
+                          WHERE LOWER(TRIM(email)) = @email 
+                          LIMIT 1";
+                        var p = cmd.CreateParameter();
+                        p.ParameterName = "@email";
+                        p.Value = normalizedEmail;
+                        cmd.Parameters.Add(p);
+
+                        using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow);
+                        if (await reader.ReadAsync())
+                        {
+                            user = new User
+                            {
+                                UserId = reader["user_id"].ToString() ?? string.Empty,
+                                FullName = reader["full_name"].ToString() ?? string.Empty,
+                                Email = reader["email"].ToString() ?? string.Empty,
+                                RoleId = reader["role_id"] == DBNull.Value ? null : reader["role_id"].ToString(),
+                                IsActive = reader["is_active"] != DBNull.Value && Convert.ToBoolean(reader["is_active"]),
+                                CreatedAt = reader["created_at"] != DBNull.Value ? Convert.ToDateTime(reader["created_at"]) : DateTime.UtcNow,
+                                PasswordHash = string.Empty
+                            };
+                        }
+                        await conn.CloseAsync();
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                if (user == null)
+                {
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
+
+                var token = GenerateJwtToken(user);
+                var expiresAt = DateTime.UtcNow.AddHours(24);
 
                 var response = new LoginResponseDto
                 {
@@ -197,8 +253,7 @@ namespace PMS_APIs.Controllers
                 // Generate unique user ID
                 var userId = await GenerateUniqueUserId();
 
-                // Hash password
-                var passwordHash = HashPassword(createUserDto.Password);
+                var passwordHash = createUserDto.Password;
 
                 // Create new user
                 var user = new User
@@ -422,28 +477,7 @@ namespace PMS_APIs.Controllers
         /// </summary>
         /// <param name="password">Plain text password to hash</param>
         /// <returns>Hashed password string</returns>
-        private string HashPassword(string password)
-        {
-            // Using a simple SHA256 hash with salt for demonstration
-            // In production, use BCrypt or similar
-            using var sha256 = SHA256.Create();
-            var salt = "PMS_Salt_2024"; // In production, use a random salt per user
-            var saltedPassword = password + salt;
-            var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(saltedPassword));
-            return Convert.ToBase64String(hashedBytes);
-        }
-
-        /// <summary>
-        /// Verifies a password against its hash
-        /// </summary>
-        /// <param name="password">Plain text password to verify</param>
-        /// <param name="hash">Stored password hash</param>
-        /// <returns>True if password matches hash, false otherwise</returns>
-        private bool VerifyPassword(string password, string hash)
-        {
-            var computedHash = HashPassword(password);
-            return computedHash == hash;
-        }
+        
 
         /// <summary>
         /// Attempts to read a legacy plaintext password from the `users` table.

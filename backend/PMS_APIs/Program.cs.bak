@@ -149,30 +149,6 @@ app.UseCors("ReactApp");
 app.UseAuthentication();
 app.UseAuthorization();
 
-// ========== ADD THESE MINIMAL API ENDPOINTS ==========
-// Add health check endpoint
-app.MapGet("/health", () => "Healthy");
-
-// Add root endpoint
-app.MapGet("/", () => "PMS Backend API is running! - Available endpoints: /health, /swagger, /api");
-
-// Add API root endpoint
-app.MapGet("/api", () => new { 
-    message = "Property Management System API", 
-    version = "v1",
-    endpoints = new {
-        health = "/health",
-        swagger = "/swagger",
-        customers = "/api/customers",
-        registrations = "/api/registrations",
-        properties = "/api/properties"
-    }
-});
-
-// Add a simple test endpoint
-app.MapGet("/api/test", () => new { message = "PMS API is working correctly!" });
-// ========== END OF ADDED ENDPOINTS ==========
-
 // Map API controllers
 app.MapControllers();
 
@@ -186,7 +162,6 @@ try
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PMS_APIs.Data.PmsDbContext>();
     db.Database.Migrate();
-    Console.WriteLine("[Startup] Database migrations applied successfully");
 }
 catch (Exception ex)
 {
@@ -194,3 +169,20 @@ catch (Exception ex)
 }
 
 app.Run();
+
+// Apply pending EF Core migrations on startup
+// Purpose: Ensure schema (including paymentschedule) exists on the configured database.
+// Inputs: none; uses configured DbContext
+// Outputs: Migrated database schema
+try
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<PMS_APIs.Data.PmsDbContext>();
+    db.Database.Migrate();
+}
+catch (Exception ex)
+{
+    // In development, it is helpful to see migration errors in logs.
+    // The app continues to run; API calls may fail until this is addressed.
+    Console.WriteLine($"[Startup] Database migration failed: {ex.Message}");
+}

@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  backend:
+    build:
+      context: ./backend/PMS_APIs
+      dockerfile: Dockerfile
+    image: pms-backend:latest
+    container_name: pms-backend
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:5000
+    ports:
+      - "5000:5000"
+    networks:
+      - pms-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - REACT_APP_API_URL=http://localhost:5000   # or use http://backend:5000 when using nginx reverse-proxy
+    image: pms-frontend:latest
+    container_name: pms-frontend
+    ports:
+      - "3000:80" # host 3000 -> container 80 (nginx)
+    networks:
+      - pms-net
+
+networks:
+  pms-net:
+    driver: bridge

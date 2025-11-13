@@ -38,7 +38,7 @@ export default function Login() {
   return (
     <Wrapper>
       <Card>
-        <BrandTitle>Welcome back</BrandTitle>
+        <BrandTitle>Login PMS</BrandTitle>
         <Subtitle>Please sign in to continue</Subtitle>
         {error && <ErrorBox role="alert">{error}</ErrorBox>}
         <Form onSubmit={handleSubmit}>

@@ -62,10 +62,11 @@ namespace PMS_APIs.Controllers
         /// Outputs: schedule row or 404 if not found.
         /// </summary>
         [HttpGet("{id}")]
-        public async Task<ActionResult<PaymentSchedule>> GetPaymentSchedule(string id)
+        public async Task<ActionResult> GetPaymentSchedule(string id)
         {
+            var trimmedId = id?.Trim() ?? string.Empty;
             var row = await _context.PaymentSchedules
-                .FirstOrDefaultAsync(s => s.ScheduleId == id);
+                .FirstOrDefaultAsync(s => s.ScheduleId != null && s.ScheduleId.Trim() == trimmedId);
 
             if (row == null)
             {
@@ -90,6 +91,16 @@ namespace PMS_APIs.Controllers
                 return BadRequest(new { message = "Valid PlanId is required" });
             }
 
+            // Server-side validation to avoid common DbUpdate errors
+            if (schedule.DueDate == null)
+            {
+                return BadRequest(new { message = "DueDate is required" });
+            }
+            if (schedule.Amount == null || schedule.Amount <= 0)
+            {
+                return BadRequest(new { message = "Amount must be a positive number" });
+            }
+
             // Generate ScheduleId if missing
             if (string.IsNullOrWhiteSpace(schedule.ScheduleId))
             {
@@ -100,6 +111,13 @@ namespace PMS_APIs.Controllers
             schedule.SurchargeApplied ??= true;
             schedule.SurchargeRate ??= 0.05m;
 
+            // Normalize DueDate to UTC to satisfy PostgreSQL 'timestamp with time zone'
+            if (schedule.DueDate != null)
+            {
+                var dateOnly = schedule.DueDate.Value.Date;
+                schedule.DueDate = DateTime.SpecifyKind(dateOnly, DateTimeKind.Utc);
+            }
+
             _context.PaymentSchedules.Add(schedule);
             try
             {
@@ -108,7 +126,8 @@ namespace PMS_APIs.Controllers
             }
             catch (DbUpdateException ex)
             {
-                return BadRequest(new { message = "Error creating payment schedule", error = ex.Message });
+                var details = ex.InnerException?.Message ?? ex.GetBaseException().Message ?? ex.Message;
+                return BadRequest(new { message = "Error creating payment schedule", error = ex.Message, details });
             }
         }
 
@@ -120,13 +139,15 @@ namespace PMS_APIs.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> PutPaymentSchedule(string id, PaymentSchedule schedule)
         {
-            if (id != schedule.ScheduleId)
+            var trimmedId = id?.Trim() ?? string.Empty;
+            var trimmedBodyId = (schedule.ScheduleId ?? string.Empty).Trim();
+            if (trimmedId != trimmedBodyId)
             {
                 return BadRequest(new { message = "Schedule ID mismatch" });
             }
 
             var existing = await _context.PaymentSchedules
-                .FirstOrDefaultAsync(s => s.ScheduleId == id);
+                .FirstOrDefaultAsync(s => s.ScheduleId != null && s.ScheduleId.Trim() == trimmedId);
             if (existing == null)
             {
                 return NotFound(new { message = "Payment schedule not found" });
@@ -136,7 +157,16 @@ namespace PMS_APIs.Controllers
             existing.PlanId = schedule.PlanId;
             existing.PaymentDescription = schedule.PaymentDescription;
             existing.InstallmentNo = schedule.InstallmentNo;
-            existing.DueDate = schedule.DueDate;
+            // Normalize DueDate to UTC to satisfy PostgreSQL 'timestamp with time zone'
+            if (schedule.DueDate != null)
+            {
+                var dateOnly = schedule.DueDate.Value.Date;
+                existing.DueDate = DateTime.SpecifyKind(dateOnly, DateTimeKind.Utc);
+            }
+            else
+            {
+                existing.DueDate = null;
+            }
             existing.Amount = schedule.Amount;
             existing.SurchargeApplied = schedule.SurchargeApplied;
             existing.SurchargeRate = schedule.SurchargeRate;
@@ -149,7 +179,8 @@ namespace PMS_APIs.Controllers
             }
             catch (DbUpdateException ex)
             {
-                return BadRequest(new { message = "Error updating payment schedule", error = ex.Message });
+                var details = ex.InnerException?.Message ?? ex.GetBaseException().Message ?? ex.Message;
+                return BadRequest(new { message = "Error updating payment schedule", error = ex.Message, details });
             }
         }
 
@@ -161,8 +192,9 @@ namespace PMS_APIs.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeletePaymentSchedule(string id)
         {
+            var trimmedId = id?.Trim() ?? string.Empty;
             var existing = await _context.PaymentSchedules
-                .FirstOrDefaultAsync(s => s.ScheduleId == id);
+                .FirstOrDefaultAsync(s => s.ScheduleId != null && s.ScheduleId.Trim() == trimmedId);
             if (existing == null)
             {
                 return NotFound(new { message = "Payment schedule not found" });

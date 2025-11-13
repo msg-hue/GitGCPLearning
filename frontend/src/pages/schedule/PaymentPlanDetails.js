@@ -67,7 +67,7 @@ export default function PaymentPlanDetails() {
   useEffect(() => {
     setLoadingPlan(true);
     setErrorPlan('');
-    getPaymentPlan(planId)
+    getPaymentPlan(String(planId || '').trim())
       .then((data) => setPlan(data))
       .catch((e) => setErrorPlan(e.message || 'Failed to load plan'))
       .finally(() => setLoadingPlan(false));
@@ -85,7 +85,7 @@ export default function PaymentPlanDetails() {
       </Header>
 
       <Subhead>
-        Viewing Plan: <strong style={{ color: '#00234C' }}>{planId}</strong>
+        Viewing Plan: <strong style={{ color: '#00234C' }}>{String(planId || '').trim()}</strong>
         {plan && (
           <span> — {plan.planName || plan.PlanName || ''}</span>
         )}
@@ -95,7 +95,7 @@ export default function PaymentPlanDetails() {
       <Section>
         <h2 style={{ margin: 0, fontSize: '1.1rem' }}>Schedule Payments</h2>
         <div style={{ marginTop: '0.5rem' }}>
-          <PaymentSchedules defaultPlanId={planId} />
+          <PaymentSchedules defaultPlanId={String(planId || '').trim()} />
         </div>
       </Section>
     </Page>

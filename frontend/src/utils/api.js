@@ -34,7 +34,14 @@ export async function fetchJson(path, options = {}) {
   const data = isJson ? await resp.json() : await resp.text();
 
   if (!resp.ok) {
-    const message = isJson ? (data.message || JSON.stringify(data)) : data;
+    let message;
+    if (isJson) {
+      const base = data.message || '';
+      const extra = data.error || data.errors || '';
+      message = [base, extra].filter(Boolean).join(' - ') || JSON.stringify(data);
+    } else {
+      message = data;
+    }
     throw new Error(`API error ${resp.status}: ${message}`);
   }
 
@@ -231,7 +238,11 @@ export async function getPaymentPlan(id) {
  */
 export async function getPaymentSchedules(params = {}) {
   const query = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
+  const sanitized = { ...params };
+  if (sanitized.planId !== undefined && sanitized.planId !== null) {
+    sanitized.planId = String(sanitized.planId).trim();
+  }
+  Object.entries(sanitized).forEach(([k, v]) => {
     if (v !== undefined && v !== null && v !== '') query.append(k, v);
   });
 

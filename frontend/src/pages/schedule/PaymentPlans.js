@@ -111,7 +111,7 @@ export default function PaymentPlans() {
     const term = search.trim().toLowerCase();
     if (!term) return plans;
     return plans.filter(p => (
-      String(p.planId ?? p.PlanId ?? '').toLowerCase().includes(term) ||
+      String(p.planId ?? p.planid ?? p.PlanId ?? '').toLowerCase().includes(term) ||
       String(p.planName ?? p.PlanName ?? '').toLowerCase().includes(term) ||
       String(p.frequency ?? p.Frequency ?? '').toLowerCase().includes(term)
     ));
@@ -153,14 +153,14 @@ export default function PaymentPlans() {
             <tr><Td colSpan={9}>No payment plans found</Td></tr>
           ) : (
             filtered.map((p, i) => {
-              const planId = p.planId ?? p.PlanId;
+              const planId = p.planId ?? p.planid ?? p.PlanId;
               const planName = p.planName ?? p.PlanName;
               // Map schema differences: totalamount/durationmonths in user schema
-              const totalAmount = p.totalamount ?? p.TotalAmount ?? p.installmentAmount ?? p.InstallmentAmount;
-              const durationMonths = p.durationmonths ?? p.DurationMonths ?? p.totalInstallments ?? p.TotalInstallments;
+              const totalAmount = p.totalamount ?? p.totalAmount ?? p.TotalAmount ?? p.installmentAmount ?? p.InstallmentAmount;
+              const durationMonths = p.durationmonths ?? p.durationMonths ?? p.DurationMonths ?? p.totalInstallments ?? p.TotalInstallments;
               const freq = p.frequency ?? p.Frequency;
               const desc = p.description ?? p.Description;
-              const created = p.createdat ?? p.CreatedAt;
+              const created = p.createdat ?? p.createdAt ?? p.CreatedAt;
               
               return (
                 <tr key={planId || i}>
@@ -172,7 +172,7 @@ export default function PaymentPlans() {
                   <Td>{desc ?? '-'}</Td>
                   <Td>{created ? String(created).slice(0,10) : '-'}</Td>
                   <Td>
-                    <Button onClick={() => navigate(`/schedule/payment-plans/${encodeURIComponent(planId)}`)}>
+                    <Button onClick={() => navigate(`/schedule/payment-plans/${encodeURIComponent(String(planId || '').trim())}`)}>
                       View Details
                     </Button>
                   </Td>

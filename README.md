@@ -46,7 +46,11 @@ Notes
   - Customer payments: `http://localhost:3003/payments/customer/<CustomerId>`
 - Components:
   - `frontend/src/pages/schedule/PaymentPlanDetails.js` — shows only Schedule Payments for the selected plan (Child Schedules removed).
-  - `frontend/src/pages/schedule/PaymentSchedules.js` — accepts `defaultPlanId` to pre-filter by Plan ID and fetches `/api/PaymentSchedules?planId=<PlanId>`.
+- `frontend/src/pages/schedule/PaymentSchedules.js` — accepts `defaultPlanId` to pre-filter by Plan ID and fetches `/api/PaymentSchedules?planId=<PlanId>`.
+  - Grouped view: Shows Payment Schedules categorized with an accordion (twistee) UI.
+    - View modes: `Grouped` or `Table`.
+    - Group by: `Plan`, `Due Month`, or `Surcharge Applied`.
+    - Clicking the twistee expands to show all relevant payments.
   - `frontend/src/pages/payments/CustomerPayments.js` — lists and updates payments for a selected customer.
 - Usage:
   - Open Plans list and click “View Details” to drill into a plan.
@@ -54,7 +58,94 @@ Notes
   - From the details page, open a customer’s payments and edit via modal.
 - MVP vs Enterprise:
   - MVP: Client-side filtering of customers by `PlanId`, direct calls to `/api/Payments`.
-  - Enterprise: Add server-side `planId` filter in `CustomersController`, centralize state (Redux/Zustand), role-based permissions, and audit logging.
+- Enterprise: Add server-side `planId` filter in `CustomersController`, centralize state (Redux/Zustand), role-based permissions, and audit logging.
+
+#### Payment Schedule Edit: Auto-Close & Payload Requirement (Fix)
+- Issue: Editing a schedule and clicking Save did not close the modal; an error appeared above the grid after manual close.
+- Root cause: Backend `PUT /api/PaymentSchedules/{id}` requires the request body to include `ScheduleId` equal to the path `id`. Missing or mismatched IDs return “Schedule ID mismatch”.
+- Fixes implemented:
+  - Frontend now sends PascalCase keys including `ScheduleId` in the update payload.
+  - `DueDate` is sent as a `yyyy-mm-dd` string from the date input for predictable binding.
+  - The edit modal auto-closes on both success and error; on success a green notice shows: “Schedule updated successfully”.
+- Files updated:
+  - `frontend/src/pages/schedule/PaymentSchedules.js` — update payload, auto-close behavior, success notice.
+- How to verify:
+  - Open `http://localhost:3005/schedule/payment-plans/PLAN005`.
+  - Click “Edit” on a schedule, toggle “Surcharge Applied”, and press “Save Changes”.
+  - The modal should close automatically; the success notice appears and the grid refreshes with the updated value.
+  - If an error occurs, the modal still closes and the error message shows above the grid.
+
+#### New: Add Schedule Payment (Blank Form)
+- UI: An `Add` button is available on the Payment Schedules grid.
+- Behavior:
+  - Clicking `Add` opens a blank modal form with fields for Description, Installment No, Due Date, Amount, Surcharge Applied, Surcharge Rate, and Note.
+  - The schedule is created under the current `PlanId` filter (e.g., PLAN005).
+  - On success, the modal closes automatically, a green success notice appears, and the grid refreshes.
+- API:
+  - Endpoint: `POST /api/PaymentSchedules`
+  - Payload keys (PascalCase): `PlanId`, `PaymentDescription`, `InstallmentNo`, `DueDate`, `Amount`, `SurchargeApplied`, `SurchargeRate`, `Description`.
+- Files updated:
+  - `frontend/src/pages/schedule/PaymentSchedules.js` — Add button, blank add modal, call to `createPaymentSchedule`.
+- How to verify:
+  - Open `http://localhost:3005/schedule/payment-plans/PLAN005`.
+  - Click `Add`, fill minimal fields (e.g., Description, Amount), and click `Create Schedule`.
+  - Confirm the modal closes, success notice appears, and the new row shows in the grid.
+  - Inline validation requires `PlanId`, `DueDate`, and a positive `Amount`. Errors show inside the add modal.
+
+##### Backend validation and error details (new)
+- The API enforces `DueDate` and a positive `Amount` on create to prevent common DB errors.
+- Error responses include inner exception details when available, identifying issues such as missing tables or constraint violations.
+- Affected file: `backend/PMS_APIs/Controllers/PaymentSchedulesController.cs`.
+- Frontend displays these backend messages in the add modal for quick diagnosis.
+
+##### Backend date handling (UTC normalization)
+- The backend normalizes `DueDate` to UTC when creating or updating schedules to satisfy PostgreSQL `timestamp with time zone`.
+- Accepts `yyyy-mm-dd` strings from the frontend and converts them to `00:00:00Z` for consistency.
+- Update endpoint also applies the same normalization to avoid `Kind=Unspecified` errors.
+- Relevant methods: `PostPaymentSchedule` and `PutPaymentSchedule` in `PaymentSchedulesController.cs`.
+- Example payload:
+
+```json
+{
+  "PlanId": "PLAN005",
+  "PaymentDescription": "Third payment",
+  "InstallmentNo": 3,
+  "DueDate": "2026-02-10",
+  "Amount": 17500,
+  "SurchargeApplied": false,
+  "SurchargeRate": 0,
+  "Description": "Check UTC"
+}
+```
+
+On success the API returns `DueDate` as `2026-02-10T00:00:00Z`.
+
+##### Backend ID handling (trim padded IDs)
+- Some legacy tables use fixed-length `char(n)` columns which pad IDs with spaces (e.g., `"SC0000006 "`).
+- The backend trims IDs for `GET /api/PaymentSchedules/{id}`, `PUT`, and `DELETE` to ensure reliable matching.
+- Example:
+  - `GET /api/PaymentSchedules/SC0000006` returns the record even if the stored ID is `"SC0000006 "`.
+- For updates, prefer sending `DueDate` as an ISO string with `Z` (`UTC`) to avoid Npgsql `Kind=Unspecified` errors.
+
+### New: Payment Schedules Grouped View (Twistee)
+- Route: `http://localhost:3005/schedule/payment-schedules`
+- View modes:
+  - `Grouped`: Accordion sections show counts and expand to display schedules.
+  - `Table`: Original flat table.
+- Group by options:
+  - `Plan`: groups by `PlanId`.
+  - `Due Month`: groups by `YYYY-MM` from `DueDate`.
+  - `Surcharge`: groups by applied vs not applied.
+- Brand styling: primary `#dd9c6b`, secondary `#00234C`, font `Lexend`.
+- Data scope:
+  - Grouped view loads all pages from the backend to aggregate complete categories (e.g., all 10 schedules under `PLAN001`).
+  - Table view respects pagination (`page`/`pageSize`). Use Grouped mode when you need full category counts.
+  - Tip: For large datasets, consider server-side grouping or increase backend page size caps.
+- How to verify:
+  - Open the route above.
+  - Switch View Mode to `Grouped`.
+  - Choose a Group By option (e.g., `Plan`).
+  - Click a twistee header to expand and see its relevant payments.
 
 ### Backend API Features
 - RESTful API endpoints for all operations
@@ -1765,3 +1856,33 @@ Troubleshooting
   - `src/styles/GlobalStyles.js` (brand theme)
 - Utilities:
   - `src/utils/api.js` (new helpers for plans and schedules)
+### Fix: ScheduleId/PlanId Mapping and Trimming
+
+- Symptoms: `scheduleId` and `planId` appeared blank in `PaymentSchedules`, despite data existing in the database. Some plan routes included trailing spaces (e.g., `/schedule/payment-plans/PLAN005%20%20%20`).
+- Changes:
+  - Mapped multiple JSON casing variants from the API: `scheduleid` / `ScheduleId` / `scheduleId` and `planid` / `PlanId` / `planId`.
+  - Trimmed `planId` in navigation, detail fetch (`getPaymentPlan`), and the schedules query (`getPaymentSchedules`) to avoid whitespace mismatches.
+- Files:
+  - `frontend/src/pages/schedule/PaymentSchedules.js` – field mapping and search across casing variants.
+  - `frontend/src/pages/schedule/PaymentPlanDetails.js` – trims `planId` from URL and passes sanitized `defaultPlanId`.
+  - `frontend/src/pages/schedule/PaymentPlans.js` – trims `planId` when navigating to details and maps camelCase fields.
+  - `frontend/src/utils/api.js` – trims `planId` in `getPaymentSchedules` query params.
+- Verify:
+  - Open `http://localhost:3005/schedule/payment-plans/PLAN005`.
+  - Ensure `Schedule ID` and `Plan ID` columns render values and filters work.
+  - If IDs include spaces, confirm they are trimmed in API calls and display.
+### Update Schedule Payments (New)
+
+- Where: `Schedule → Payment Plans → View Details` (route: `/schedule/payment-plans/:planId`).
+- Action: Each row in "Schedule Payments" has an `Edit` button.
+- Flow:
+  - Click `Edit` to open a brand-styled modal.
+  - Update fields: Description, Installment No, Due Date, Amount, Surcharge Applied, Surcharge Rate, Note.
+  - Click `Save Changes`; the page refreshes the grid.
+- Tech:
+  - UI: `frontend/src/pages/schedule/PaymentSchedules.js` (Lexend font, colors: primary `#dd9c6b`, secondary `#00234C`).
+  - API: `updatePaymentSchedule(id, payload)` in `frontend/src/utils/api.js`.
+  - Data handling: IDs are trimmed; field mapping covers camelCase/Pascal/lowercase.
+- Verify:
+  - Open `http://localhost:3005/schedule/payment-plans/PLAN005`.
+  - Click `Edit` on a schedule, change `Amount`, save, and confirm the grid refreshes with updated values.
