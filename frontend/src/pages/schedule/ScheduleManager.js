@@ -37,8 +37,8 @@ const Actions = styled.div`
 `;
 
 const Button = styled.button`
-  background: ${props => props.variant === 'primary' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.variant === 'primary' ? 'white' : props.theme.colors.secondary};
+  background: ${props => props.$variant === 'primary' ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.$variant === 'primary' ? 'white' : props.theme.colors.secondary};
   border: 1px solid ${props => props.theme.colors.secondary};
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
@@ -389,8 +389,8 @@ export default function ScheduleManager({ planId }) {
         <HeaderLeft>
           <Title>Child Schedules</Title>
           <Actions>
-            <Button onClick={() => fetchRows()} variant="secondary">Refresh</Button>
-            <Button onClick={openAdd} variant="primary">Add Schedule</Button>
+            <Button onClick={() => fetchRows()} $variant="secondary">Refresh</Button>
+            <Button onClick={openAdd} $variant="primary">Add Schedule</Button>
           </Actions>
         </HeaderLeft>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -527,8 +527,8 @@ export default function ScheduleManager({ planId }) {
 
                 {saveError && <div style={{ gridColumn: '1 / -1', color: 'crimson' }}>{saveError}</div>}
                 <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                  <Button variant="secondary" onClick={() => setAddOpen(false)}>Cancel</Button>
-                  <Button variant="primary" onClick={saveAdd} disabled={saving}>{saving ? 'Saving…' : 'Create'}</Button>
+                  <Button $variant="secondary" onClick={() => setAddOpen(false)}>Cancel</Button>
+                  <Button $variant="primary" onClick={saveAdd} disabled={saving}>{saving ? 'Saving…' : 'Create'}</Button>
                 </div>
               </div>
             </ModalBody>
@@ -585,8 +585,8 @@ export default function ScheduleManager({ planId }) {
 
                 {saveError && <div style={{ gridColumn: '1 / -1', color: 'crimson' }}>{saveError}</div>}
                 <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                  <Button variant="secondary" onClick={() => { setEditOpen(false); setEditForm(null); }}>Cancel</Button>
-                  <Button variant="primary" onClick={saveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
+                  <Button $variant="secondary" onClick={() => { setEditOpen(false); setEditForm(null); }}>Cancel</Button>
+                  <Button $variant="primary" onClick={saveEdit} disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
                 </div>
               </div>
             </ModalBody>

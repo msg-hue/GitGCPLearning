@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { getPaymentPlans } from '../../utils/api';
+import { getPaymentPlans, createPaymentPlan } from '../../utils/api';
 
 const Wrap = styled.div`
   padding: 1.5rem;
@@ -65,6 +65,64 @@ const Input = styled.input`
 const Pager = styled.div`
   display: none;
 `;
+const ModalOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+`;
+const ModalCard = styled.div`
+  width: 520px;
+  max-width: 92vw;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.18);
+  padding: 1rem;
+  font-family: 'Lexend', sans-serif;
+`;
+const ModalTitle = styled.h3`
+  margin: 0 0 0.75rem;
+  color: ${p => p.theme.colors.secondary};
+`;
+const ModalRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+`;
+const Label = styled.label`
+  display: block;
+  font-size: 0.85rem;
+  color: ${p => p.theme.colors.secondary};
+  margin-bottom: 0.25rem;
+`;
+const ModalInput = styled.input`
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  font-family: 'Lexend', sans-serif;
+`;
+const ModalTextarea = styled.textarea`
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  width: 100%;
+  min-height: 70px;
+  font-family: 'Lexend', sans-serif;
+`;
+const ModalActions = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+`;
 
 /**
  * PaymentPlans
@@ -79,6 +137,17 @@ export default function PaymentPlans() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [meta, setMeta] = useState({ totalCount: 0, totalPages: 1 });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createError, setCreateError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [form, setForm] = useState({
+    planName: '',
+    totalAmount: '',
+    durationMonths: '',
+    frequency: '',
+    description: '',
+  });
 
   /**
    * fetchPlans
@@ -117,11 +186,57 @@ export default function PaymentPlans() {
     ));
   }, [plans, search]);
 
+  const openCreate = () => {
+    setForm({
+      planName: '',
+      totalAmount: '',
+      durationMonths: '',
+      frequency: '',
+      description: '',
+    });
+    setCreateError('');
+    setNotice('');
+    setCreateOpen(true);
+  };
+
+  const savePlan = async () => {
+    const name = String(form.planName || '').trim();
+    if (!name) {
+      setCreateError('Plan name is required');
+      return;
+    }
+    if (form.totalAmount === '' || Number.isNaN(Number(form.totalAmount))) {
+      setCreateError('Total amount must be a valid number');
+      return;
+    }
+
+    setSaving(true);
+    setCreateError('');
+    try {
+      const payload = {
+        PlanName: name,
+        TotalAmount: Number(form.totalAmount),
+        DurationMonths: form.durationMonths === '' ? null : Number(form.durationMonths),
+        Frequency: form.frequency || null,
+        Description: String(form.description || '').trim() || null,
+      };
+      await createPaymentPlan(payload);
+      setNotice('Payment plan created successfully');
+      setCreateOpen(false);
+      await fetchPlans();
+    } catch (e) {
+      setCreateError(e.message || 'Failed to create payment plan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <Wrap>
       <TitleRow>
         <Title>Schedule: Payment Plans</Title>
         <Actions>
+          <Button onClick={openCreate}>Create Plan</Button>
           <Button onClick={fetchPlans} disabled={loading}>Refresh</Button>
         </Actions>
       </TitleRow>
@@ -130,6 +245,7 @@ export default function PaymentPlans() {
         <Input placeholder="Search by ID/Name/Frequency" value={search} onChange={e => setSearch(e.target.value)} />
       </Toolbar>
 
+      {notice && <div style={{ color: '#0a7f3f', marginBottom: '0.5rem' }}>{notice}</div>}
       {error && <div style={{ color: '#b00020', marginBottom: '0.5rem' }}>{error}</div>}
 
       <Grid>
@@ -184,6 +300,43 @@ export default function PaymentPlans() {
       </Grid>
 
       <Pager />
+
+      {createOpen && (
+        <ModalOverlay>
+          <ModalCard>
+            <ModalTitle>Create Payment Plan</ModalTitle>
+            {createError && <div style={{ color: '#b00020', marginBottom: '0.5rem' }}>{createError}</div>}
+            <ModalRow>
+              <div>
+                <Label>Plan Name</Label>
+                <ModalInput value={form.planName} onChange={e => setForm({ ...form, planName: e.target.value })} />
+              </div>
+              <div>
+                <Label>Total Amount</Label>
+                <ModalInput type="number" step="0.01" value={form.totalAmount} onChange={e => setForm({ ...form, totalAmount: e.target.value })} />
+              </div>
+            </ModalRow>
+            <ModalRow>
+              <div>
+                <Label>Duration (months)</Label>
+                <ModalInput type="number" value={form.durationMonths} onChange={e => setForm({ ...form, durationMonths: e.target.value })} />
+              </div>
+              <div>
+                <Label>Frequency</Label>
+                <ModalInput value={form.frequency} onChange={e => setForm({ ...form, frequency: e.target.value })} placeholder="e.g., Monthly" />
+              </div>
+            </ModalRow>
+            <div>
+              <Label>Description</Label>
+              <ModalTextarea value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
+            </div>
+            <ModalActions>
+              <Button onClick={() => setCreateOpen(false)} style={{ background: '#777' }}>Cancel</Button>
+              <Button onClick={savePlan} disabled={saving}>{saving ? 'Saving…' : 'Create Plan'}</Button>
+            </ModalActions>
+          </ModalCard>
+        </ModalOverlay>
+      )}
     </Wrap>
   );
 }

@@ -70,7 +70,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("TEXT")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("TEXT")
@@ -633,7 +633,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("TEXT")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("ReceivedBy")
                         .HasMaxLength(100)
@@ -664,7 +664,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("TEXT")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("Block")
                         .HasMaxLength(50)
@@ -728,7 +728,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("ProjectName")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT")
-                        .HasColumnName("project_name");
+                        .HasColumnName("projectname");
 
                     b.Property<string>("Size")
                         .HasMaxLength(50)
@@ -889,7 +889,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("ProjectName")
                         .HasMaxLength(100)
                         .HasColumnType("TEXT")
-                        .HasColumnName("project_name");
+                        .HasColumnName("projectname");
 
                     b.Property<DateOnly?>("RegDate")
                         .HasColumnType("TEXT")
@@ -971,7 +971,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("TEXT")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("Reason")
                         .HasColumnType("TEXT")

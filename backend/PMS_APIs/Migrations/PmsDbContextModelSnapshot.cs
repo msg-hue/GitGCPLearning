@@ -72,7 +72,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("Remarks")
                         .HasColumnType("text")
@@ -90,7 +90,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("PropertyId");
 
-                    b.ToTable("allotments");
+                    b.ToTable("allotments", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Customer", b =>
@@ -218,7 +218,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("RegId");
 
-                    b.ToTable("customers");
+                    b.ToTable("customers", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.CustomerLog", b =>
@@ -263,7 +263,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("customer_logs");
+                    b.ToTable("customer_logs", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Ndc", b =>
@@ -327,7 +327,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("ndcs");
+                    b.ToTable("ndcs", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Payment", b =>
@@ -435,7 +435,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("ReferenceNo");
 
-                    b.ToTable("payments");
+                    b.ToTable("payments", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.PaymentPlan", b =>
@@ -479,7 +479,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasKey("PlanId");
 
-                    b.ToTable("paymentplan");
+                    b.ToTable("paymentplan", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.PaymentSchedule", b =>
@@ -528,7 +528,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("PlanId", "DueDate");
 
-                    b.ToTable("paymentschedule");
+                    b.ToTable("paymentschedule", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Penalty", b =>
@@ -597,7 +597,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("penalties");
+                    b.ToTable("penalties", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Possession", b =>
@@ -650,7 +650,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("ReceivedBy")
                         .HasMaxLength(100)
@@ -673,15 +673,15 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("PropertyId");
 
-                    b.ToTable("possessions");
+                    b.ToTable("possessions", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Property", b =>
                 {
-                    b.Property<string>("PropertyId")
+                    b.Property<string>("PropertyId") 
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("Block")
                         .HasMaxLength(50)
@@ -745,7 +745,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("ProjectName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
-                        .HasColumnName("project_name");
+                        .HasColumnName("projectname");
 
                     b.Property<string>("Size")
                         .HasMaxLength(50)
@@ -776,7 +776,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("ProjectName", "Block", "PlotNo");
 
-                    b.ToTable("properties");
+                    b.ToTable("property", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Refund", b =>
@@ -855,7 +855,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("refunds");
+                    b.ToTable("refunds", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Registration", b =>
@@ -906,7 +906,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("ProjectName")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
-                        .HasColumnName("project_name");
+                        .HasColumnName("projectname");
 
                     b.Property<DateOnly?>("RegDate")
                         .HasColumnType("date")
@@ -944,7 +944,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasKey("RegId");
 
-                    b.ToTable("registration");
+                    b.ToTable("registration", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Transfer", b =>
@@ -988,7 +988,7 @@ namespace PMS_APIs.Migrations
                     b.Property<string>("PropertyId")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
-                        .HasColumnName("property_id");
+                        .HasColumnName("propertyid");
 
                     b.Property<string>("Reason")
                         .HasColumnType("text")
@@ -1022,7 +1022,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("ToCustomerId");
 
-                    b.ToTable("transfers");
+                    b.ToTable("transfers", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.User", b =>
@@ -1065,7 +1065,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasKey("UserId");
 
-                    b.ToTable("users");
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Waiver", b =>
@@ -1131,7 +1131,7 @@ namespace PMS_APIs.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.ToTable("waivers");
+                    b.ToTable("waivers", (string)null);
                 });
 
             modelBuilder.Entity("PMS_APIs.Models.Allotment", b =>

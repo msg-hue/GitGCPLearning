@@ -18,7 +18,7 @@ namespace PMS_APIs.Models
         [Column("reg_date")]
         public DateOnly? RegDate { get; set; }
 
-        [Column("project_name")]
+        [Column("projectname")]
         [StringLength(100)]
         public string? ProjectName { get; set; }
 

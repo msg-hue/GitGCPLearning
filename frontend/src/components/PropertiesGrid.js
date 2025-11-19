@@ -42,8 +42,8 @@ const Actions = styled.div`
 `;
 
 const Button = styled.button`
-  background: ${props => props.variant === 'primary' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.variant === 'primary' ? 'white' : props.theme.colors.secondary};
+  background: ${props => props.$variant === 'primary' ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.$variant === 'primary' ? 'white' : props.theme.colors.secondary};
   border: 1px solid ${props => props.theme.colors.secondary};
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
@@ -234,6 +234,7 @@ export default function PropertiesGrid({ title = 'Properties', defaultFilter = '
     };
     getProperties(params)
       .then(data => {
+        console.log('[PropertiesGrid] API response:', data);
         const list = Array.isArray(data?.data) ? data.data : Array.isArray(data) ? data : [];
         if (!isMounted) return;
         setProperties(list);
@@ -245,10 +246,18 @@ export default function PropertiesGrid({ title = 'Properties', defaultFilter = '
         setPage(pg);
         setPageSize(ps);
         setTotalPages(tp);
+        console.log('[PropertiesGrid] Loaded', list.length, 'properties');
       })
       .catch(err => {
+        console.error('[PropertiesGrid] Error loading properties:', err);
         if (!isMounted) return;
-        setError(err.message || 'Failed to load properties');
+        const errorMsg = err.message || 'Failed to load properties';
+        setError(errorMsg);
+        console.error('[PropertiesGrid] Error details:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name
+        });
       })
       .finally(() => {
         if (isMounted) setLoading(false);
@@ -370,7 +379,7 @@ export default function PropertiesGrid({ title = 'Properties', defaultFilter = '
           </Actions>
         </HeaderLeft>
         <HeaderRight>
-          <Button variant="primary" onClick={() => setShowCreate(true)}>New Property</Button>
+          <Button $variant="primary" onClick={() => setShowCreate(true)}>New Property</Button>
         </HeaderRight>
       </Header>
 
@@ -608,7 +617,7 @@ function PropertyForm({ initial, onSubmit }) {
         </div>
       </FormGrid>
       <ActionsRow>
-        <Button type="submit" variant="primary">Save</Button>
+        <Button type="submit" $variant="primary">Save</Button>
       </ActionsRow>
     </form>
   );

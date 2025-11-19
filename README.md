@@ -679,8 +679,8 @@ Quick fix (MVP): create only the missing tables manually, then run the API.
 ```
 -- Create table if missing (Neon/PostgreSQL)
 CREATE TABLE IF NOT EXISTS properties (
-  property_id VARCHAR(10) PRIMARY KEY,
-  project_name VARCHAR(100),
+  propertyid VARCHAR(10) PRIMARY KEY,
+  projectname VARCHAR(100),
   sub_project VARCHAR(100),
   block VARCHAR(50),
   plot_no VARCHAR(50),
@@ -701,8 +701,8 @@ CREATE TABLE IF NOT EXISTS properties (
   main_road BOOLEAN
 );
 
-CREATE INDEX IF NOT EXISTS IX_properties_project_name_block_plot_no
-  ON properties (project_name, block, plot_no);
+CREATE INDEX IF NOT EXISTS IX_properties_projectname_block_plot_no
+  ON properties (projectname, block, plot_no);
 ```
 
 #### Seed Sample Properties (Local Testing)

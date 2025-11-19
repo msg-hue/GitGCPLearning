@@ -6,24 +6,24 @@ namespace PMS_APIs.Models
     /// <summary>
     /// Represents an allotment record in the Property Management System
     /// </summary>
-    [Table("allotments")]
+    [Table("allotment")]
     public class Allotment
     {
         [Key]
-        [Column("allotment_id")]
+        [Column("allotmentid")]
         [StringLength(10)]
         public string AllotmentId { get; set; } = string.Empty;
 
-        [Column("customer_id")]
+        [Column("customerid")]
         [StringLength(10)]
         public string? CustomerId { get; set; }
 
-        [Column("property_id")]
+        [Column("propertyid")]
         [StringLength(10)]
         public string? PropertyId { get; set; }
 
-        [Column("allotment_date")]
-        public DateOnly? AllotmentDate { get; set; }
+        [Column("allotmentdate")]
+        public DateTime? AllotmentDate { get; set; }
 
         [Column("allotment_letter_no")]
         [StringLength(50)]

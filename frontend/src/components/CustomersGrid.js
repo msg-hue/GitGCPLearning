@@ -43,8 +43,8 @@ const Actions = styled.div`
 `;
 
 const Button = styled.button`
-  background: ${props => props.variant === 'primary' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.variant === 'primary' ? 'white' : props.theme.colors.secondary};
+  background: ${props => props.$variant === 'primary' ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.$variant === 'primary' ? 'white' : props.theme.colors.secondary};
   border: 1px solid ${props => props.theme.colors.secondary};
   padding: 0.5rem 0.75rem;
   border-radius: 4px;
@@ -572,7 +572,7 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
             <ModalHeader>
               <span>Customer Details — {selectedId}</span>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <Button variant={editMode ? 'primary' : 'secondary'} onClick={handleEditToggle}>
+                <Button $variant={editMode ? 'primary' : 'secondary'} onClick={handleEditToggle}>
                   {editMode ? 'Cancel Edit' : 'Edit'}
                 </Button>
                 <CloseButton onClick={() => { setSelectedId(null); setDetail(null); setEditMode(false); setForm(null); }}>Close</CloseButton>
@@ -670,8 +670,8 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
 
                   {saveError && <div style={{ gridColumn: '1 / -1', color: 'crimson' }}>{saveError}</div>}
                   <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                    <Button variant="secondary" onClick={handleEditToggle}>Cancel</Button>
-                    <Button variant="primary" onClick={handleSave} disabled={saving}>
+                    <Button $variant="secondary" onClick={handleEditToggle}>Cancel</Button>
+                    <Button $variant="primary" onClick={handleSave} disabled={saving}>
                       {saving ? 'Saving…' : 'Save Changes'}
                     </Button>
                   </div>

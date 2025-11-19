@@ -41,8 +41,8 @@ const Actions = styled.div`
 `;
 
 const Button = styled.button`
-  background: ${props => props.variant === 'primary' ? props.theme.colors.primary : 'transparent'};
-  color: ${props => props.variant === 'primary' ? 'white' : props.theme.colors.secondary};
+  background: ${props => props.$variant === 'primary' ? props.theme.colors.primary : 'transparent'};
+  color: ${props => props.$variant === 'primary' ? 'white' : props.theme.colors.secondary};
   border: 1px solid ${props => props.theme.colors.secondary};
   padding: 0.5rem 0.75rem;
   border-radius: 4px;

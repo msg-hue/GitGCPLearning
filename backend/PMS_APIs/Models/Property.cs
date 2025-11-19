@@ -6,83 +6,56 @@ namespace PMS_APIs.Models
 {
     /// <summary>
     /// Represents a property in the Property Management System
+    /// Maps to the 'property' table in the database
     /// </summary>
-    [Table("properties")]
+    [Table("property")]
     public class Property
     {
         [Key]
-        [Column("property_id")]
+        [Column("propertyid")]
         [StringLength(10)]
         public string PropertyId { get; set; } = string.Empty;
 
-        [Column("project_name")]
-        [StringLength(100)]
-        public string? ProjectName { get; set; }
+        [Column("projectid")]
+        [StringLength(10)]
+        public string? ProjectId { get; set; }
 
-        [Column("sub_project")]
-        [StringLength(100)]
-        public string? SubProject { get; set; }
+        [Column("plotno")]
+        [StringLength(50)]
+        public string? PlotNo { get; set; }
+
+        [Column("street")]
+        [StringLength(50)]
+        public string? Street { get; set; }
+
+        [Column("plottype")]
+        [StringLength(50)]
+        public string? PlotType { get; set; }
 
         [Column("block")]
         [StringLength(50)]
         public string? Block { get; set; }
 
-        [Column("plot_no")]
+        [Column("propertytype")]
         [StringLength(50)]
-        public string? PlotNo { get; set; }
+        public string? PropertyType { get; set; }
 
         [Column("size")]
         [StringLength(50)]
         public string? Size { get; set; }
 
-        [Column("category")]
-        [StringLength(50)]
-        public string? Category { get; set; }
-
-        [Column("type")]
-        [StringLength(50)]
-        public string? Type { get; set; }
-
-        [Column("location")]
-        [StringLength(255)]
-        public string? Location { get; set; }
-
-        [Column("price")]
-        [Precision(15, 2)]
-        public decimal? Price { get; set; }
-
         [Column("status")]
         [StringLength(50)]
         public string Status { get; set; } = "Available";
 
-        [Column("created_at")]
+        [Column("createdat")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [Column("updated_at")]
+        [NotMapped]
         public DateTime? UpdatedAt { get; set; }
 
-        [Column("description")]
-        public string? Description { get; set; }
-
-        [Column("features")]
-        public string? Features { get; set; }
-
-        [Column("coordinates")]
-        [StringLength(100)]
-        public string? Coordinates { get; set; }
-
-        [Column("facing")]
-        [StringLength(50)]
-        public string? Facing { get; set; }
-
-        [Column("corner")]
-        public bool? Corner { get; set; }
-
-        [Column("park_facing")]
-        public bool? ParkFacing { get; set; }
-
-        [Column("main_road")]
-        public bool? MainRoad { get; set; }
+        [Column("additionalinfo")]
+        public string? AdditionalInfo { get; set; }
 
         // Navigation properties
         public ICollection<Allotment> Allotments { get; set; } = new List<Allotment>();

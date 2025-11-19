@@ -37,11 +37,11 @@ namespace PMS_APIs.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "properties",
+                name: "property",
                 columns: table => new
                 {
-                    property_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
-                    project_name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    propertyid = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
+                    projectname = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     sub_project = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     block = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                     plot_no = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
@@ -63,7 +63,7 @@ namespace PMS_APIs.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_properties", x => x.property_id);
+                    table.PrimaryKey("PK_property", x => x.propertyid);
                 });
 
             migrationBuilder.CreateTable(
@@ -72,7 +72,7 @@ namespace PMS_APIs.Migrations
                 {
                     reg_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
                     reg_date = table.Column<DateOnly>(type: "TEXT", nullable: true),
-                    project_name = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
+                    projectname = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     sub_project = table.Column<string>(type: "TEXT", maxLength: 100, nullable: true),
                     size = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                     category = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
@@ -144,7 +144,7 @@ namespace PMS_APIs.Migrations
                 {
                     allotment_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
                     customer_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
-                    property_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
+                    propertyid = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
                     allotment_date = table.Column<DateOnly>(type: "TEXT", nullable: true),
                     allotment_letter_no = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                     status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
@@ -165,10 +165,10 @@ namespace PMS_APIs.Migrations
                         principalTable: "customers",
                         principalColumn: "customer_id");
                     table.ForeignKey(
-                        name: "FK_allotments_properties_property_id",
-                        column: x => x.property_id,
-                        principalTable: "properties",
-                        principalColumn: "property_id");
+                        name: "FK_allotments_property_propertyid",
+                        column: x => x.propertyid,
+                        principalTable: "property",
+                        principalColumn: "propertyid");
                 });
 
             migrationBuilder.CreateTable(
@@ -290,7 +290,7 @@ namespace PMS_APIs.Migrations
                 {
                     possession_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
                     customer_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
-                    property_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
+                    propertyid = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
                     possession_date = table.Column<DateOnly>(type: "TEXT", nullable: true),
                     possession_letter_no = table.Column<string>(type: "TEXT", maxLength: 50, nullable: true),
                     status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
@@ -312,10 +312,10 @@ namespace PMS_APIs.Migrations
                         principalTable: "customers",
                         principalColumn: "customer_id");
                     table.ForeignKey(
-                        name: "FK_possessions_properties_property_id",
-                        column: x => x.property_id,
-                        principalTable: "properties",
-                        principalColumn: "property_id");
+                        name: "FK_possessions_property_propertyid",
+                        column: x => x.propertyid,
+                        principalTable: "property",
+                        principalColumn: "propertyid");
                 });
 
             migrationBuilder.CreateTable(
@@ -355,7 +355,7 @@ namespace PMS_APIs.Migrations
                     transfer_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: false),
                     from_customer_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
                     to_customer_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
-                    property_id = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
+                    propertyid = table.Column<string>(type: "TEXT", maxLength: 10, nullable: true),
                     transfer_date = table.Column<DateOnly>(type: "TEXT", nullable: true),
                     transfer_fee = table.Column<decimal>(type: "TEXT", precision: 15, scale: 2, nullable: true),
                     status = table.Column<string>(type: "TEXT", maxLength: 50, nullable: false),
@@ -383,10 +383,10 @@ namespace PMS_APIs.Migrations
                         principalColumn: "customer_id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_transfers_properties_property_id",
-                        column: x => x.property_id,
-                        principalTable: "properties",
-                        principalColumn: "property_id");
+                        name: "FK_transfers_property_propertyid",
+                        column: x => x.propertyid,
+                        principalTable: "property",
+                        principalColumn: "propertyid");
                 });
 
             migrationBuilder.CreateTable(
@@ -422,9 +422,9 @@ namespace PMS_APIs.Migrations
                 column: "customer_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_allotments_property_id",
+                name: "IX_allotments_propertyid",
                 table: "allotments",
-                column: "property_id");
+                column: "propertyid");
 
             migrationBuilder.CreateIndex(
                 name: "IX_customer_logs_customer_id",
@@ -482,14 +482,14 @@ namespace PMS_APIs.Migrations
                 column: "customer_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_possessions_property_id",
+                name: "IX_possessions_propertyid",
                 table: "possessions",
-                column: "property_id");
+                column: "propertyid");
 
             migrationBuilder.CreateIndex(
-                name: "IX_properties_project_name_block_plot_no",
-                table: "properties",
-                columns: new[] { "project_name", "block", "plot_no" });
+                name: "IX_property_projectname_block_plot_no",
+                table: "property",
+                columns: new[] { "projectname", "block", "plot_no" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_refunds_customer_id",
@@ -502,9 +502,9 @@ namespace PMS_APIs.Migrations
                 column: "from_customer_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_transfers_property_id",
+                name: "IX_transfers_propertyid",
                 table: "transfers",
-                column: "property_id");
+                column: "propertyid");
 
             migrationBuilder.CreateIndex(
                 name: "IX_transfers_to_customer_id",
@@ -548,7 +548,7 @@ namespace PMS_APIs.Migrations
                 name: "waivers");
 
             migrationBuilder.DropTable(
-                name: "properties");
+                name: "property");
 
             migrationBuilder.DropTable(
                 name: "customers");

@@ -29,6 +29,7 @@ namespace PMS_APIs.Data
         public DbSet<Transfer> Transfers { get; set; }
         public DbSet<Ndc> Ndcs { get; set; }
         public DbSet<Possession> Possessions { get; set; }
+        public DbSet<Project> Projects { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -76,8 +77,21 @@ namespace PMS_APIs.Data
                 .HasIndex(c => c.Email)
                 .IsUnique(false);
 
+            // Explicitly configure table names to match database (singular)
             modelBuilder.Entity<Property>()
-                .HasIndex(p => new { p.ProjectName, p.Block, p.PlotNo })
+                .ToTable("property");
+
+            modelBuilder.Entity<Allotment>()
+                .ToTable("allotment");
+
+            modelBuilder.Entity<Possession>()
+                .ToTable("possession");
+
+            modelBuilder.Entity<Transfer>()
+                .ToTable("transfer");
+
+            modelBuilder.Entity<Property>()
+                .HasIndex(p => new { p.ProjectId, p.Block, p.PlotNo })
                 .IsUnique(false);
 
             modelBuilder.Entity<Payment>()

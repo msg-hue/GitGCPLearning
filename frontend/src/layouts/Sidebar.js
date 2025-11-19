@@ -249,10 +249,11 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       icon: FiHome,
       sublinks: [
         { label: 'Overview', path: '' },
-        { label: 'Projects', path: 'projects' },
-        { label: 'Tasks', path: 'tasks' },
-        { label: 'Team', path: 'team' },
-        { label: 'Calendar', path: 'calendar' },
+        // Projects, Tasks, Team, and Calendar are hidden as requested
+        // { label: 'Projects', path: 'projects' },
+        // { label: 'Tasks', path: 'tasks' },
+        // { label: 'Team', path: 'team' },
+        // { label: 'Calendar', path: 'calendar' },
       ],
     },
     {
@@ -272,7 +273,6 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       sublinks: [
         { label: 'Projects', path: 'projects' },
         { label: 'Inventory Status', path: 'inventory-status' },
-        { label: 'Price Management', path: 'price-management' },
         { label: 'Availability Matrix', path: 'availability-matrix' },
         { label: 'All Properties', path: 'all-properties' },
       ],
@@ -282,7 +282,7 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       slug: 'payments',
       icon: FiCreditCard,
       sublinks: [
-        { label: 'Collections', path: 'collections' },
+        { label: 'All Payments', path: 'collections' },
         { label: 'Dues & Defaulters', path: 'dues-defaulters' },
         { label: 'Waivers & Adjustments', path: 'waivers-adjustments' },
         { label: 'NDC Management', path: 'ndc-management' },

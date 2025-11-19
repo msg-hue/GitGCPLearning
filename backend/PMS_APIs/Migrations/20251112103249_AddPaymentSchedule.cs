@@ -363,7 +363,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "transfers",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -656,7 +656,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "project_name",
+                name: "projectname",
                 table: "properties",
                 type: "character varying(100)",
                 maxLength: 100,
@@ -799,7 +799,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "properties",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -839,7 +839,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "possessions",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -1749,7 +1749,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "allotments",
                 type: "character varying(10)",
                 maxLength: 10,
@@ -1932,7 +1932,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "project_name",
+                name: "projectname",
                 table: "registration",
                 type: "character varying(100)",
                 maxLength: 100,
@@ -2496,7 +2496,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "transfers",
                 type: "TEXT",
                 maxLength: 10,
@@ -2789,7 +2789,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "project_name",
+                name: "projectname",
                 table: "properties",
                 type: "TEXT",
                 maxLength: 100,
@@ -2932,7 +2932,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "properties",
                 type: "TEXT",
                 maxLength: 10,
@@ -2972,7 +2972,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "possessions",
                 type: "TEXT",
                 maxLength: 10,
@@ -3882,7 +3882,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "property_id",
+                name: "propertyid",
                 table: "allotments",
                 type: "TEXT",
                 maxLength: 10,
@@ -4065,7 +4065,7 @@ namespace PMS_APIs.Migrations
                 oldNullable: true);
 
             migrationBuilder.AlterColumn<string>(
-                name: "project_name",
+                name: "projectname",
                 table: "registrations",
                 type: "TEXT",
                 maxLength: 100,

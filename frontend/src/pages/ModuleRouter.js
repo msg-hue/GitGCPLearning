@@ -2,6 +2,50 @@ import React from 'react';
 import styled from 'styled-components';
 import { useParams } from 'react-router-dom';
 
+// Error boundary for lazy-loaded components
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Error loading component:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <Container>
+          <Title>Error Loading Component</Title>
+          <div style={{ color: '#b00020', marginTop: '1rem' }}>
+            {this.state.error?.message || 'Failed to load component. Please refresh the page.'}
+          </div>
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{
+              marginTop: '1rem',
+              padding: '0.5rem 1rem',
+              background: '#00234c',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer'
+            }}
+          >
+            Refresh Page
+          </button>
+        </Container>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const Container = styled.div`
   padding: 1.5rem;
   font-family: 'Lexend', sans-serif;
@@ -108,8 +152,12 @@ export default function ModuleRouter() {
   const Mod = routes[module]?.[view];
   if (Mod) {
     return (
-      <React.Suspense fallback={<Container><Title>Loading…</Title></Container>}>
-        <Mod />
+      <React.Suspense 
+        fallback={<Container><Title>Loading…</Title></Container>}
+      >
+        <ErrorBoundary>
+          <Mod />
+        </ErrorBoundary>
       </React.Suspense>
     );
   }

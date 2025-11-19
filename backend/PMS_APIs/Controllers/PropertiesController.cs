@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Data;
 using PMS_APIs.Data;
 using PMS_APIs.Models;
 
@@ -39,46 +42,54 @@ namespace PMS_APIs.Controllers
             string? projectName = null,
             string? size = null)
         {
-            var query = _context.Properties.AsQueryable();
-
-            if (!string.IsNullOrEmpty(search))
+            try
             {
-                query = query.Where(p =>
-                    p.ProjectName!.Contains(search) ||
-                    p.Block!.Contains(search) ||
-                    p.PlotNo!.Contains(search) ||
-                    p.Location!.Contains(search));
+                var query = _context.Properties.AsQueryable();
+
+                if (!string.IsNullOrEmpty(search))
+                {
+                    query = query.Where(p =>
+                        (p.ProjectId != null && p.ProjectId.Contains(search)) ||
+                        (p.Block != null && p.Block.Contains(search)) ||
+                        (p.PlotNo != null && p.PlotNo.Contains(search)) ||
+                        (p.PropertyId != null && p.PropertyId.Contains(search)) ||
+                        (p.Size != null && p.Size.Contains(search)));
+                }
+
+                if (!string.IsNullOrEmpty(status))
+                {
+                    query = query.Where(p => p.Status == status);
+                }
+
+                if (!string.IsNullOrEmpty(projectName))
+                {
+                    query = query.Where(p => p.ProjectId == projectName);
+                }
+
+                if (!string.IsNullOrEmpty(size))
+                {
+                    query = query.Where(p => p.Size == size);
+                }
+
+                var totalCount = await query.CountAsync();
+                var properties = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    data = properties,
+                    totalCount,
+                    page,
+                    pageSize,
+                    totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+                });
             }
-
-            if (!string.IsNullOrEmpty(status))
+            catch (Exception ex)
             {
-                query = query.Where(p => p.Status == status);
+                return StatusCode(500, new { message = "Error retrieving properties", error = ex.Message });
             }
-
-            if (!string.IsNullOrEmpty(projectName))
-            {
-                query = query.Where(p => p.ProjectName == projectName);
-            }
-
-            if (!string.IsNullOrEmpty(size))
-            {
-                query = query.Where(p => p.Size == size);
-            }
-
-            var totalCount = await query.CountAsync();
-            var properties = await query
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            return Ok(new
-            {
-                data = properties,
-                totalCount,
-                page,
-                pageSize,
-                totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
-            });
         }
 
         /// <summary>
@@ -89,17 +100,24 @@ namespace PMS_APIs.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<Property>> GetProperty(string id)
         {
-            var property = await _context.Properties
-                .Include(p => p.Allotments)
-                    .ThenInclude(a => a.Customer)
-                .FirstOrDefaultAsync(p => p.PropertyId == id);
-
-            if (property == null)
+            try
             {
-                return NotFound(new { message = "Property not found" });
-            }
+                var property = await _context.Properties
+                    .Include(p => p.Allotments)
+                        .ThenInclude(a => a.Customer)
+                    .FirstOrDefaultAsync(p => p.PropertyId == id);
 
-            return Ok(property);
+                if (property == null)
+                {
+                    return NotFound(new { message = "Property not found" });
+                }
+
+                return Ok(property);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving property", error = ex.Message });
+            }
         }
 
         /// <summary>
@@ -152,25 +170,16 @@ namespace PMS_APIs.Controllers
                 return NotFound(new { message = "Property not found" });
             }
 
-            // Update properties
-            existingProperty.ProjectName = property.ProjectName;
-            existingProperty.SubProject = property.SubProject;
-            existingProperty.Block = property.Block;
+            // Update properties - matching actual database schema
+            existingProperty.ProjectId = property.ProjectId;
             existingProperty.PlotNo = property.PlotNo;
+            existingProperty.Street = property.Street;
+            existingProperty.PlotType = property.PlotType;
+            existingProperty.Block = property.Block;
+            existingProperty.PropertyType = property.PropertyType;
             existingProperty.Size = property.Size;
-            existingProperty.Category = property.Category;
-            existingProperty.Type = property.Type;
-            existingProperty.Location = property.Location;
-            existingProperty.Price = property.Price;
             existingProperty.Status = property.Status;
-            existingProperty.Description = property.Description;
-            existingProperty.Features = property.Features;
-            existingProperty.Coordinates = property.Coordinates;
-            existingProperty.Facing = property.Facing;
-            existingProperty.Corner = property.Corner;
-            existingProperty.ParkFacing = property.ParkFacing;
-            existingProperty.MainRoad = property.MainRoad;
-            existingProperty.UpdatedAt = DateTime.UtcNow;
+            existingProperty.AdditionalInfo = property.AdditionalInfo;
 
             try
             {
@@ -234,7 +243,7 @@ namespace PMS_APIs.Controllers
         {
             var availableProperties = await _context.Properties
                 .Where(p => p.Status == "Available")
-                .OrderBy(p => p.ProjectName)
+                .OrderBy(p => p.ProjectId)
                 .ThenBy(p => p.Block)
                 .ThenBy(p => p.PlotNo)
                 .ToListAsync();
@@ -249,30 +258,227 @@ namespace PMS_APIs.Controllers
         [HttpGet("statistics")]
         public async Task<ActionResult> GetPropertyStatistics()
         {
-            var totalProperties = await _context.Properties.CountAsync();
-            var availableProperties = await _context.Properties.CountAsync(p => p.Status == "Available");
-            var allottedProperties = await _context.Properties.CountAsync(p => p.Status == "Allotted");
-            var soldProperties = await _context.Properties.CountAsync(p => p.Status == "Sold");
-
-            var projectStats = await _context.Properties
-                .GroupBy(p => p.ProjectName)
-                .Select(g => new
-                {
-                    ProjectName = g.Key,
-                    TotalProperties = g.Count(),
-                    AvailableProperties = g.Count(p => p.Status == "Available"),
-                    AllottedProperties = g.Count(p => p.Status == "Allotted")
-                })
-                .ToListAsync();
-
-            return Ok(new
+            try
             {
-                totalProperties,
-                availableProperties,
-                allottedProperties,
-                soldProperties,
-                projectStats
-            });
+                var conn = _context.Database.GetDbConnection();
+                if (conn.State != ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
+                // Get summary statistics using raw SQL to avoid type mapping issues
+                int totalProperties = 0;
+                int availableProperties = 0;
+                int allottedProperties = 0;
+                int soldProperties = 0;
+
+                using (var statsCmd = conn.CreateCommand())
+                {
+                    statsCmd.CommandText = @"SELECT 
+                                                COUNT(*) as total,
+                                                COUNT(*) FILTER (WHERE status = 'Available') as available,
+                                                COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
+                                                COUNT(*) FILTER (WHERE status = 'Sold') as sold
+                                              FROM property";
+                    using var reader = await statsCmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        totalProperties = Convert.ToInt32(reader["total"]);
+                        availableProperties = Convert.ToInt32(reader["available"]);
+                        allottedProperties = Convert.ToInt32(reader["allotted"]);
+                        soldProperties = Convert.ToInt32(reader["sold"]);
+                    }
+                }
+
+                // Get project statistics using raw SQL
+                var projectStats = new List<object>();
+                using (var projectStatsCmd = conn.CreateCommand())
+                {
+                    projectStatsCmd.CommandText = @"SELECT 
+                                                        projectid::text as projectid,
+                                                        COUNT(*) as total,
+                                                        COUNT(*) FILTER (WHERE status = 'Available') as available,
+                                                        COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
+                                                        COUNT(*) FILTER (WHERE status = 'Sold') as sold
+                                                     FROM property
+                                                     WHERE projectid IS NOT NULL
+                                                     GROUP BY projectid";
+                    using var reader = await projectStatsCmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        projectStats.Add(new
+                        {
+                            ProjectId = reader["projectid"]?.ToString(),
+                            TotalProperties = Convert.ToInt32(reader["total"]),
+                            AvailableProperties = Convert.ToInt32(reader["available"]),
+                            AllottedProperties = Convert.ToInt32(reader["allotted"]),
+                            SoldProperties = Convert.ToInt32(reader["sold"])
+                        });
+                    }
+                }
+
+                return Ok(new
+                {
+                    totalProperties,
+                    availableProperties,
+                    allottedProperties,
+                    soldProperties,
+                    projectStats
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving property statistics", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get inventory status report grouped by project and status
+        /// </summary>
+        /// <returns>Inventory status report with project-wise breakdown and property details</returns>
+        [HttpGet("inventory-status")]
+        [AllowAnonymous]
+        public async Task<ActionResult> GetInventoryStatus()
+        {
+            try
+            {
+                var conn = _context.Database.GetDbConnection();
+                if (conn.State != ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
+                // Get all projects
+                var projects = await _context.Projects.ToListAsync();
+
+                // Get summary statistics using raw SQL
+                int totalProperties = 0;
+                int availableProperties = 0;
+                int allottedProperties = 0;
+                int soldProperties = 0;
+
+                using (var statsCmd = conn.CreateCommand())
+                {
+                    statsCmd.CommandText = @"SELECT 
+                                                COUNT(*) as total,
+                                                COUNT(*) FILTER (WHERE status = 'Available') as available,
+                                                COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
+                                                COUNT(*) FILTER (WHERE status = 'Sold') as sold
+                                              FROM property";
+                    using var reader = await statsCmd.ExecuteReaderAsync();
+                    if (await reader.ReadAsync())
+                    {
+                        totalProperties = Convert.ToInt32(reader["total"]);
+                        availableProperties = Convert.ToInt32(reader["available"]);
+                        allottedProperties = Convert.ToInt32(reader["allotted"]);
+                        soldProperties = Convert.ToInt32(reader["sold"]);
+                    }
+                }
+
+                // Get all properties with their details using raw SQL - matching actual database schema
+                // Explicitly cast all columns to avoid type conversion issues
+                var allProperties = new List<Property>();
+                using (var propsCmd = conn.CreateCommand())
+                {
+                    propsCmd.CommandText = @"SELECT 
+                                                propertyid::text as propertyid, 
+                                                projectid::text as projectid, 
+                                                plotno::text as plotno, 
+                                                street::text as street, 
+                                                plottype::text as plottype, 
+                                                block::text as block, 
+                                                propertytype::text as propertytype, 
+                                                size::text as size, 
+                                                status::text as status, 
+                                                createdat::timestamp as createdat, 
+                                                additionalinfo::text as additionalinfo
+                                             FROM property
+                                             ORDER BY projectid, block, plotno";
+                    using var reader = await propsCmd.ExecuteReaderAsync();
+                    while (await reader.ReadAsync())
+                    {
+                        var prop = new Property
+                        {
+                            PropertyId = reader["propertyid"]?.ToString() ?? string.Empty,
+                            ProjectId = reader["projectid"]?.ToString(),
+                            PlotNo = reader["plotno"]?.ToString(),
+                            Street = reader["street"]?.ToString(),
+                            PlotType = reader["plottype"]?.ToString(),
+                            Block = reader["block"]?.ToString(),
+                            PropertyType = reader["propertytype"]?.ToString(),
+                            Size = reader["size"]?.ToString(),
+                            Status = reader["status"]?.ToString() ?? "Available",
+                            CreatedAt = reader["createdat"] != DBNull.Value ? Convert.ToDateTime(reader["createdat"]) : DateTime.UtcNow,
+                            AdditionalInfo = reader["additionalinfo"]?.ToString()
+                        };
+
+                        allProperties.Add(prop);
+                    }
+                }
+
+                // Get project-wise inventory breakdown
+                var projectInventory = new List<object>();
+
+                foreach (var project in projects)
+                {
+                    // Get properties for this project by matching project ID
+                    var projectProperties = allProperties
+                        .Where(p => p.ProjectId == project.ProjectId)
+                        .ToList();
+
+                    var total = projectProperties.Count;
+                    var available = projectProperties.Count(p => p.Status == "Available");
+                    var allotted = projectProperties.Count(p => p.Status == "Allotted");
+                    var sold = projectProperties.Count(p => p.Status == "Sold");
+                    var utilizationRate = total > 0 ? Math.Round((double)(allotted + sold) / total * 100, 1) : 0;
+
+                    projectInventory.Add(new
+                    {
+                        projectId = project.ProjectId,
+                        projectName = project.ProjectName ?? string.Empty,
+                        type = project.Type ?? string.Empty,
+                        location = project.Location ?? string.Empty,
+                        total = total,
+                        available = available,
+                        allotted = allotted,
+                        sold = sold,
+                        utilizationRate = utilizationRate
+                    });
+                }
+
+                // Map properties to match frontend expectations
+                var propertyList = allProperties.Select(p => new
+                {
+                    propertyId = p.PropertyId,
+                    projectId = p.ProjectId,
+                    plotNo = p.PlotNo,
+                    street = p.Street,
+                    plotType = p.PlotType,
+                    block = p.Block,
+                    propertyType = p.PropertyType,
+                    size = p.Size,
+                    status = p.Status,
+                    createdAt = p.CreatedAt,
+                    additionalInfo = p.AdditionalInfo
+                }).ToList();
+
+                return Ok(new
+                {
+                    summary = new
+                    {
+                        totalProperties,
+                        availableProperties,
+                        allottedProperties,
+                        soldProperties
+                    },
+                    projects = projectInventory,
+                    properties = propertyList
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving inventory status", error = ex.Message, stackTrace = ex.StackTrace });
+            }
         }
 
         private bool PropertyExists(string id)

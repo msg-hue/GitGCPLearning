@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { Link } from 'react-router-dom';
 import { FiUsers, FiCheckCircle, FiSlash, FiTrendingUp } from 'react-icons/fi';
 
 const Wrap = styled.div`
@@ -23,6 +24,18 @@ const Title = styled.h1`
 const Updated = styled.span`
   color: ${p => p.theme.colors.gray};
   font-size: 0.85rem;
+  display: none; /* Hidden as requested */
+`;
+
+const OverviewLink = styled(Link)`
+  color: ${p => p.theme.colors.secondary};
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+
+  &:hover {
+    color: ${p => p.theme.colors.primary};
+  }
 `;
 
 const Grid = styled.div`
@@ -114,7 +127,9 @@ export default function Dashboard() {
   return (
     <Wrap>
       <Header>
-        <Title>Dashboard Overview</Title>
+        <Title>
+          Dashboard <OverviewLink to="/dashboard">Overview</OverviewLink>
+        </Title>
         <Updated>Last updated: Static placeholder</Updated>
       </Header>
       <Grid>

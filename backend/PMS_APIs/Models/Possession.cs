@@ -6,24 +6,24 @@ namespace PMS_APIs.Models
     /// <summary>
     /// Represents a possession record in the Property Management System
     /// </summary>
-    [Table("possessions")]
+    [Table("possession")]
     public class Possession
     {
         [Key]
-        [Column("possession_id")]
+        [Column("possessionid")]
         [StringLength(10)]
         public string PossessionId { get; set; } = string.Empty;
 
-        [Column("customer_id")]
+        [Column("customerid")]
         [StringLength(10)]
         public string? CustomerId { get; set; }
 
-        [Column("property_id")]
+        [Column("propertyid")]
         [StringLength(10)]
         public string? PropertyId { get; set; }
 
-        [Column("possession_date")]
-        public DateOnly? PossessionDate { get; set; }
+        [Column("possessiondate")]
+        public DateTime? PossessionDate { get; set; }
 
         [Column("possession_letter_no")]
         [StringLength(50)]

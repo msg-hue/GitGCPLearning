@@ -1,3 +1,5 @@
+import { API_BASE_URL } from '../config';
+
 /**
  * fetchJson
  * Purpose: Perform a JSON HTTP request to the backend API with optional auth.
@@ -8,7 +10,11 @@
  *  - Resolves to parsed JSON response or throws error with context
  */
 export async function fetchJson(path, options = {}) {
-  const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:5296';
+  const baseUrl = API_BASE_URL;
+  
+  // Debug: Log the full URL being called
+  const fullUrl = `${baseUrl}${path}`;
+  console.log('[API] Calling:', fullUrl, 'Base URL:', baseUrl);
 
   const headers = {
     'Accept': 'application/json',
@@ -191,6 +197,66 @@ export async function deleteProperty(id) {
   });
 }
 
+export async function getPropertyStatistics() {
+  return fetchJson('/api/Properties/statistics');
+}
+
+export async function getInventoryStatus() {
+  return fetchJson('/api/Properties/inventory-status');
+}
+
+/**
+ * Projects API
+ * Purpose: CRUD operations for projects.
+ * Inputs:
+ *  - getProjects: params object with { page, pageSize, search, type, location }
+ *  - getProject: id string
+ *  - createProject: payload object with project fields
+ *  - updateProject: id string and payload object
+ *  - deleteProject: id string
+ * Outputs:
+ *  - JSON responses from backend endpoints.
+ */
+export async function getProjects(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+
+  const path = query.toString()
+    ? `/api/Projects?${query.toString()}`
+    : '/api/Projects';
+
+  return fetchJson(path);
+}
+
+export async function getProject(id) {
+  if (!id) throw new Error('Project id is required');
+  return fetchJson(`/api/Projects/${encodeURIComponent(id)}`);
+}
+
+export async function createProject(payload) {
+  return fetchJson('/api/Projects', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateProject(id, payload) {
+  if (!id) throw new Error('Project id is required');
+  return fetchJson(`/api/Projects/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ ...payload, projectId: id }),
+  });
+}
+
+export async function deleteProject(id) {
+  if (!id) throw new Error('Project id is required');
+  return fetchJson(`/api/Projects/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
 /**
  * getPaymentPlans
  * Purpose: Fetch payment plans list from the backend with optional filters/pagination.
@@ -210,6 +276,14 @@ export async function getPaymentPlans(params = {}) {
     : '/api/PaymentPlans';
 
   return fetchJson(path);
+}
+
+export async function createPaymentPlan(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
+  return fetchJson('/api/PaymentPlans', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
 }
 
 /**
@@ -348,6 +422,14 @@ export async function getPayment(id) {
   return fetchJson(`/api/Payments/${encodeURIComponent(id)}`);
 }
 
+export async function createPayment(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
+  return fetchJson('/api/Payments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
 /**
  * updatePayment
  * Purpose: Update an existing payment via PUT to backend API.
@@ -360,8 +442,15 @@ export async function getPayment(id) {
 export async function updatePayment(id, payload) {
   if (!id) throw new Error('Payment id is required');
   if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
-  return fetchJson(`/api/Payments/${encodeURIComponent(id)}` , {
+  return fetchJson(`/api/Payments/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+}
+
+export async function deletePayment(id) {
+  if (!id) throw new Error('Payment id is required');
+  return fetchJson(`/api/Payments/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
   });
 }

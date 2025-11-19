@@ -101,34 +101,65 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactApp", policy =>
     {
-        // Development: allow any localhost origin (all ports) with credentials
+        // Allow specific origins: frontend on same domain and localhost for development
         policy
-            .SetIsOriginAllowed(origin =>
-            {
-                try
-                {
-                    var uri = new Uri(origin);
-                    return uri.IsLoopback; // http://localhost:* or https://localhost:*
-                }
-                catch
-                {
-                    return false;
-                }
-            })
+            .WithOrigins(
+                "http://34.31.174.65",           // Production frontend
+                "https://34.31.174.65",         // Production frontend (HTTPS)
+                "http://localhost:3001",         // Local development
+                "http://localhost:3000",         // Alternative local port
+                "http://127.0.0.1:3001",         // Localhost IP
+                "http://127.0.0.1:3000"          // Localhost IP alternative
+            )
             .AllowAnyHeader()
             .AllowAnyMethod()
-            .AllowCredentials();
+            .AllowCredentials()
+            .SetPreflightMaxAge(TimeSpan.FromSeconds(3600)); // Cache preflight for 1 hour
+        
+        // Explicitly set exposed headers if needed
+        policy.WithExposedHeaders("Content-Disposition", "Content-Length", "X-Total-Count");
     });
 });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+// Custom exception handler for API routes to return JSON instead of HTML
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        // If it's an API route, return JSON error
+        if (context.Request.Path.StartsWithSegments("/api"))
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            var errorResponse = new
+            {
+                message = "An error occurred while processing your request",
+                error = ex.Message,
+                details = ex.InnerException?.Message ?? ""
+            };
+            await context.Response.WriteAsJsonAsync(errorResponse);
+            return;
+        }
+        throw; // Re-throw for non-API routes to use default handler
+    }
+});
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
     app.UseHsts();
 }
+
+// Use CORS - Must be VERY early in pipeline for preflight OPTIONS requests
+// This must come before any other middleware that might handle requests
+app.UseCors("ReactApp");
 
 app.UseSwagger();
 app.UseSwaggerUI(c =>
@@ -141,9 +172,6 @@ app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();
-
-// Use CORS
-app.UseCors("ReactApp");
 
 // Use Authentication and Authorization
 app.UseAuthentication();
@@ -186,6 +214,7 @@ try
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PMS_APIs.Data.PmsDbContext>();
     db.Database.Migrate();
+    await PMS_APIs.Data.DatabaseSchemaNormalizer.NormalizeAsync(db);
     Console.WriteLine("[Startup] Database migrations applied successfully");
 }
 catch (Exception ex)

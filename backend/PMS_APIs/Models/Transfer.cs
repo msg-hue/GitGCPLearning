@@ -7,23 +7,23 @@ namespace PMS_APIs.Models
     /// <summary>
     /// Represents a property transfer record in the Property Management System
     /// </summary>
-    [Table("transfers")]
+    [Table("transfer")]
     public class Transfer
     {
         [Key]
-        [Column("transfer_id")]
+        [Column("transferid")]
         [StringLength(10)]
         public string TransferId { get; set; } = string.Empty;
 
-        [Column("from_customer_id")]
+        [Column("fromcustomerid")]
         [StringLength(10)]
         public string? FromCustomerId { get; set; }
 
-        [Column("to_customer_id")]
+        [Column("tocustomerid")]
         [StringLength(10)]
         public string? ToCustomerId { get; set; }
 
-        [Column("property_id")]
+        [Column("propertyid")]
         [StringLength(10)]
         public string? PropertyId { get; set; }
 
@@ -51,7 +51,7 @@ namespace PMS_APIs.Models
         [Column("documents")]
         public string? Documents { get; set; }
 
-        [Column("created_at")]
+        [Column("createdat")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [Column("created_by")]

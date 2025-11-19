@@ -10,23 +10,23 @@ namespace PMS_APIs.Models
     public class Customer
     {
         [Key]
-        [Column("customer_id")]
+        [Column("customerid")]
         [StringLength(10)]
         public string CustomerId { get; set; } = string.Empty;
 
-        [Column("reg_id")]
+        [Column("regid")]
         [StringLength(10)]
         public string? RegId { get; set; }
 
-        [Column("plan_id")]
+        [Column("planid")]
         [StringLength(10)]
         public string? PlanId { get; set; }
 
-        [Column("full_name")]
+        [Column("fullname")]
         [StringLength(150)]
         public string? FullName { get; set; }
 
-        [Column("father_name")]
+        [Column("fathername")]
         [StringLength(150)]
         public string? FatherName { get; set; }
 
@@ -34,7 +34,7 @@ namespace PMS_APIs.Models
         [StringLength(50)]
         public string? Cnic { get; set; }
 
-        [Column("passport_no")]
+        [Column("passportno")]
         [StringLength(50)]
         public string? PassportNo { get; set; }
 
@@ -53,11 +53,11 @@ namespace PMS_APIs.Models
         [StringLength(150)]
         public string? Email { get; set; }
 
-        [Column("mailing_address")]
+        [Column("mailingaddress")]
         [StringLength(255)]
         public string? MailingAddress { get; set; }
 
-        [Column("permanent_address")]
+        [Column("permanentaddress")]
         [StringLength(255)]
         public string? PermanentAddress { get; set; }
 
@@ -69,35 +69,39 @@ namespace PMS_APIs.Models
         [StringLength(100)]
         public string? Country { get; set; }
 
-        [Column("sub_project")]
+        [Column("subproject")]
         [StringLength(100)]
         public string? SubProject { get; set; }
 
-        [Column("registered_size")]
+        [Column("registeredsize")]
         [StringLength(50)]
         public string? RegisteredSize { get; set; }
 
-        [Column("created_at")]
+        [Column("createdat")]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         [Column("status")]
         [StringLength(50)]
         public string Status { get; set; } = "Active";
 
-        [Column("nominee_name")]
+        [Column("nomineename")]
         [StringLength(100)]
         public string? NomineeName { get; set; }
 
-        [Column("nominee_id")]
+        [Column("nomineeid")]
         [StringLength(50)]
         public string? NomineeId { get; set; }
 
-        [Column("nominee_relation")]
+        [Column("nomineerelation")]
         [StringLength(50)]
         public string? NomineeRelation { get; set; }
 
-        [Column("additional_info")]
+        [Column("additionalinfo")]
         public string? AdditionalInfo { get; set; }
+
+        [Column("allotmentstatus")]
+        [StringLength(50)]
+        public string? AllotmentStatus { get; set; }
 
         // Navigation properties
         public Registration? Registration { get; set; }

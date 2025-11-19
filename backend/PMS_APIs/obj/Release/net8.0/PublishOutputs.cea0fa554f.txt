@@ -1,6 +1,12 @@
 D:\technyder\pms\backend\PMS_APIs\publish\PMS_APIs.exe
+D:\technyder\pms\backend\PMS_APIs\publish\publish\web.config
 D:\technyder\pms\backend\PMS_APIs\publish\appsettings.Development.json
 D:\technyder\pms\backend\PMS_APIs\publish\appsettings.json
+D:\technyder\pms\backend\PMS_APIs\publish\publish\appsettings.Development.json
+D:\technyder\pms\backend\PMS_APIs\publish\publish\appsettings.json
+D:\technyder\pms\backend\PMS_APIs\publish\publish\PMS_APIs.deps.json
+D:\technyder\pms\backend\PMS_APIs\publish\publish\PMS_APIs.runtimeconfig.json
+D:\technyder\pms\backend\PMS_APIs\publish\publish\PMS_APIs.staticwebassets.endpoints.json
 D:\technyder\pms\backend\PMS_APIs\publish\PMS_APIs.dll
 D:\technyder\pms\backend\PMS_APIs\publish\PMS_APIs.runtimeconfig.json
 D:\technyder\pms\backend\PMS_APIs\publish\PMS_APIs.pdb
