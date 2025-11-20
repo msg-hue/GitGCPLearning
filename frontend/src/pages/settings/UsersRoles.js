@@ -1,12 +1,11 @@
 import React from 'react';
-import styled from 'styled-components';
-const Wrap = styled.div`padding:1.5rem;font-family:'Lexend',sans-serif;`;
-const Title = styled.h1`margin:0 0 0.5rem;color:${p=>p.theme.colors.secondary};font-size:1.2rem;`;
-const Note = styled.p`margin:0.25rem 0 0;color:${p=>p.theme.colors.primary};`;
+import UsersGrid from '../../components/UsersGrid';
+
 /**
  * UsersRoles
- * Purpose: Settings → Users & Roles placeholder.
+ * Purpose: Users & Roles management page using the UsersGrid component.
+ * This page is accessible via /settings/users-roles route.
  */
-export default function UsersRoles(){
-  return(<Wrap><Title>Settings: Users & Roles</Title><Note>Placeholder page for Users & Roles.</Note></Wrap>);
+export default function UsersRoles() {
+  return <UsersGrid title="Users & Roles Management" defaultFilter="All" />;
 }

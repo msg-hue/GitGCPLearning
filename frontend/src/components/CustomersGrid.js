@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
-import { getCustomers, getCustomer, updateCustomer } from '../utils/api';
+import { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer } from '../utils/api';
 import PaymentSchedules from '../pages/schedule/PaymentSchedules';
 
 const PageContainer = styled.div`
@@ -117,6 +117,37 @@ const DetailText = styled.span`
   font-weight: 600;
 `;
 
+const SearchContainer = styled.div`
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: ${props => props.theme.colors.lightGray || '#f5f5f5'};
+  border-radius: 4px;
+`;
+
+const SearchInput = styled.input`
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid ${props => props.theme.colors.secondary};
+  border-radius: 4px;
+  font-size: 0.9rem;
+  max-width: 400px;
+  &:focus {
+    outline: none;
+    border-color: ${props => props.theme.colors.primary};
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+  }
+`;
+
+const SearchLabel = styled.label`
+  color: ${props => props.theme.colors.secondary};
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+`;
+
 const ModalBackdrop = styled.div`
   position: fixed;
   top: 0;
@@ -191,6 +222,34 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
   const [saveError, setSaveError] = useState('');
   const [expandedCustomerId, setExpandedCustomerId] = useState(null);
   const [expandedPlanId, setExpandedPlanId] = useState('');
+  const [search, setSearch] = useState('');
+  const [showCreate, setShowCreate] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    FullName: '',
+    FatherName: '',
+    Cnic: '',
+    PassportNo: '',
+    Dob: null,
+    Gender: '',
+    Phone: '',
+    Email: '',
+    MailingAddress: '',
+    PermanentAddress: '',
+    City: '',
+    Country: '',
+    SubProject: '',
+    RegisteredSize: '',
+    Status: 'Active',
+    NomineeName: '',
+    NomineeId: '',
+    NomineeRelation: '',
+    AdditionalInfo: '',
+    AllotmentStatus: '',
+    RegId: null,
+    PlanId: null,
+  });
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
 
   const routeFilter = useMemo(() => defaultFilter, [defaultFilter]);
 
@@ -242,6 +301,7 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
       ...(statusFilter ? { status: statusFilter } : {}),
       ...(allotmentFilter ? { allotmentstatus: allotmentFilter } : {}),
       ...(allotmentFilter ? { allotment: allotmentFilter } : {}),
+      ...(search ? { search: search.trim() } : {}),
       page,
       pageSize,
     };
@@ -268,7 +328,7 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
       });
 
     return () => { isMounted = false; };
-  }, [routeFilter, statusFilter, allotmentFilter, page, pageSize]);
+  }, [routeFilter, statusFilter, allotmentFilter, search, page, pageSize]);
 
   /**
    * handleRowDoubleClick
@@ -381,11 +441,106 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
           PlanId: updated.PlanId ?? updated.planId ?? c.PlanId ?? c.planId,
         };
       }));
+      // Reload the list to ensure consistency
+      setPage(1);
     } catch (e) {
       setSaveError(e.message || 'Failed to save changes');
     } finally {
       setSaving(false);
     }
+  };
+
+  /**
+   * handleCreate
+   * Purpose: Create a new customer via API and refresh the list.
+   * Inputs: none (uses createForm state)
+   * Outputs:
+   *  - Creates customer and refreshes the grid.
+   */
+  const handleCreate = async () => {
+    if (!createForm.FullName || !createForm.Email) {
+      setCreateError('Full Name and Email are required');
+      return;
+    }
+    setCreating(true);
+    setCreateError('');
+    try {
+      const payload = {
+        ...createForm,
+        CustomerId: null, // Let backend generate ID
+      };
+      await createCustomer(payload);
+      setShowCreate(false);
+      setCreateForm({
+        FullName: '',
+        FatherName: '',
+        Cnic: '',
+        PassportNo: '',
+        Dob: null,
+        Gender: '',
+        Phone: '',
+        Email: '',
+        MailingAddress: '',
+        PermanentAddress: '',
+        City: '',
+        Country: '',
+        SubProject: '',
+        RegisteredSize: '',
+        Status: 'Active',
+        NomineeName: '',
+        NomineeId: '',
+        NomineeRelation: '',
+        AdditionalInfo: '',
+        AllotmentStatus: '',
+        RegId: null,
+        PlanId: null,
+      });
+      // Reload the list
+      setPage(1);
+    } catch (e) {
+      setCreateError(e.message || 'Failed to create customer');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  /**
+   * handleDelete
+   * Purpose: Delete a customer by ID (soft delete - sets status to "Deleted").
+   * Inputs:
+   *  - id: string customer identifier
+   * Outputs:
+   *  - Deletes customer and refreshes the grid.
+   */
+  const handleDelete = async (id) => {
+    if (!id) return;
+    if (!window.confirm(`Are you sure you want to delete customer ${id}? This will set their status to "Deleted".`)) {
+      return;
+    }
+    try {
+      await deleteCustomer(id);
+      setSelectedId(null);
+      setDetail(null);
+      setEditMode(false);
+      setForm(null);
+      // Reload the list
+      setPage(1);
+    } catch (e) {
+      alert(e.message || 'Failed to delete customer');
+    }
+  };
+
+  /**
+   * handleCreateFormChange
+   * Purpose: Update create form state on input change.
+   * Inputs:
+   *  - field: string field name
+   *  - value: any new value
+   * Outputs:
+   *  - Updates the createForm state for the given field.
+   */
+  const handleCreateFormChange = (field, value) => {
+    setCreateForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const filtered = useMemo(() => {
@@ -439,9 +594,38 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
           </Actions>
         </HeaderLeft>
         <HeaderRight>
+          <Button $variant="primary" onClick={() => setShowCreate(true)}>
+            + New Customer
+          </Button>
           <DetailText>Customers Detail</DetailText>
         </HeaderRight>
       </Header>
+
+      <SearchContainer>
+        <SearchLabel htmlFor="customer-search">Search:</SearchLabel>
+        <SearchInput
+          id="customer-search"
+          type="text"
+          placeholder="Search by Customer ID or CNIC..."
+          value={search}
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(1); // Reset to first page when searching
+          }}
+        />
+        {search && (
+          <Button
+            $variant="secondary"
+            onClick={() => {
+              setSearch('');
+              setPage(1);
+            }}
+            style={{ whiteSpace: 'nowrap' }}
+          >
+            Clear
+          </Button>
+        )}
+      </SearchContainer>
 
       {loading && <div>Loading customers…</div>}
       {error && <div style={{ color: 'crimson' }}>{error}</div>}
@@ -453,10 +637,9 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
             <col style={{ width: '18%' }} />
             <col style={{ width: '14%' }} />
             <col style={{ width: '10%' }} />
-            <col style={{ width: '22%' }} />
-            <col style={{ width: '10%' }} />
+            <col style={{ width: '26%' }} />
+            <col style={{ width: '12%' }} />
             <col style={{ width: '8%' }} />
-            <col style={{ width: '6%' }} />
           </colgroup>
           <thead>
             <tr>
@@ -466,7 +649,6 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
               <Th>Gender</Th>
               <Th>Email</Th>
               <Th>Phone</Th>
-              <Th>Plan ID</Th>
               <Th>Status</Th>
             </tr>
           </thead>
@@ -490,21 +672,6 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
                     <Td>{toText(c.Email || c.email)}</Td>
                     <Td>{toText(c.Phone || c.phone)}</Td>
                     <Td>
-                      {planId ? (
-                        <span
-                          role="button"
-                          onClick={(e) => { e.stopPropagation(); handlePlanClick(rowId, planId); }}
-                          style={{ color: '#dd9c6b', textDecoration: 'underline', cursor: 'pointer' }}
-                          aria-expanded={isExpanded}
-                          title="Click to view payment schedules"
-                        >
-                          {toText(planId)}
-                        </span>
-                      ) : (
-                        <span style={{ color: '#00234C' }}>—</span>
-                      )}
-                    </Td>
-                    <Td>
                       <StatusBadge status={(c.Status || c.status || (c.IsActive === true ? 'Active' : c.IsActive === false ? 'Blocked' : 'Unknown'))}>
                         {c.Status || c.status || (c.IsActive === true ? 'Active' : c.IsActive === false ? 'Blocked' : 'Unknown')}
                       </StatusBadge>
@@ -512,7 +679,7 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
                   </tr>
                   {isExpanded && expandedPlanId && (
                     <tr>
-                      <Td colSpan={8} style={{ background: '#fff' }}>
+                      <Td colSpan={7} style={{ background: '#fff' }}>
                         <div style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem' }}>
                           <PaymentSchedules defaultPlanId={expandedPlanId} />
                         </div>
@@ -524,7 +691,7 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
             })}
             {filtered.length === 0 && (
               <tr>
-                <Td colSpan="8">No customers found.</Td>
+                <Td colSpan="7">No customers found.</Td>
               </tr>
             )}
           </tbody>
@@ -669,14 +836,192 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
                   </div>
 
                   {saveError && <div style={{ gridColumn: '1 / -1', color: 'crimson' }}>{saveError}</div>}
-                  <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                    <Button $variant="secondary" onClick={handleEditToggle}>Cancel</Button>
-                    <Button $variant="primary" onClick={handleSave} disabled={saving}>
-                      {saving ? 'Saving…' : 'Save Changes'}
+                  <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'space-between', gap: '0.5rem' }}>
+                    <Button $variant="secondary" onClick={() => handleDelete(selectedId)} style={{ background: '#dc3545', color: 'white', border: '1px solid #dc3545' }}>
+                      Delete
                     </Button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Button $variant="secondary" onClick={handleEditToggle}>Cancel</Button>
+                      <Button $variant="primary" onClick={handleSave} disabled={saving}>
+                        {saving ? 'Saving…' : 'Save Changes'}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}
+            </ModalBody>
+          </ModalCard>
+        </ModalBackdrop>
+      )}
+
+      {showCreate && (
+        <ModalBackdrop onClick={() => { setShowCreate(false); setCreateError(''); }}>
+          <ModalCard onClick={(e) => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'auto' }}>
+            <ModalHeader>
+              <span>Create New Customer</span>
+              <CloseButton onClick={() => { setShowCreate(false); setCreateError(''); }}>Close</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontFamily: 'Lexend, sans-serif' }}>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Full Name <span style={{ color: 'red' }}>*</span></label>
+                  <input value={createForm.FullName}
+                         onChange={(e) => handleCreateFormChange('FullName', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Father Name</label>
+                  <input value={createForm.FatherName}
+                         onChange={(e) => handleCreateFormChange('FatherName', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>CNIC</label>
+                  <input value={createForm.Cnic}
+                         onChange={(e) => handleCreateFormChange('Cnic', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Passport No</label>
+                  <input value={createForm.PassportNo}
+                         onChange={(e) => handleCreateFormChange('PassportNo', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Date of Birth</label>
+                  <input type="date"
+                         value={createForm.Dob || ''}
+                         onChange={(e) => handleCreateFormChange('Dob', e.target.value || null)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Gender</label>
+                  <select value={createForm.Gender}
+                          onChange={(e) => handleCreateFormChange('Gender', e.target.value)}
+                          style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }}>
+                    <option value="">—</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Phone</label>
+                  <input value={createForm.Phone}
+                         onChange={(e) => handleCreateFormChange('Phone', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Email <span style={{ color: 'red' }}>*</span></label>
+                  <input type="email" value={createForm.Email}
+                         onChange={(e) => handleCreateFormChange('Email', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Mailing Address</label>
+                  <textarea value={createForm.MailingAddress}
+                            onChange={(e) => handleCreateFormChange('MailingAddress', e.target.value)}
+                            rows={2}
+                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Permanent Address</label>
+                  <textarea value={createForm.PermanentAddress}
+                            onChange={(e) => handleCreateFormChange('PermanentAddress', e.target.value)}
+                            rows={2}
+                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>City</label>
+                  <input value={createForm.City}
+                         onChange={(e) => handleCreateFormChange('City', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Country</label>
+                  <input value={createForm.Country}
+                         onChange={(e) => handleCreateFormChange('Country', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Sub Project</label>
+                  <input value={createForm.SubProject}
+                         onChange={(e) => handleCreateFormChange('SubProject', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Registered Size</label>
+                  <input value={createForm.RegisteredSize}
+                         onChange={(e) => handleCreateFormChange('RegisteredSize', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Status</label>
+                  <select value={createForm.Status}
+                          onChange={(e) => handleCreateFormChange('Status', e.target.value)}
+                          style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }}>
+                    <option value="Active">Active</option>
+                    <option value="Blocked">Blocked</option>
+                    <option value="Cancelled">Cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Allotment Status</label>
+                  <select value={createForm.AllotmentStatus}
+                          onChange={(e) => handleCreateFormChange('AllotmentStatus', e.target.value)}
+                          style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }}>
+                    <option value="">—</option>
+                    <option value="Allotted">Allotted</option>
+                    <option value="Not Allotted">Not Allotted</option>
+                    <option value="Pending">Pending</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Nominee Name</label>
+                  <input value={createForm.NomineeName}
+                         onChange={(e) => handleCreateFormChange('NomineeName', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Nominee ID</label>
+                  <input value={createForm.NomineeId}
+                         onChange={(e) => handleCreateFormChange('NomineeId', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Nominee Relation</label>
+                  <input value={createForm.NomineeRelation}
+                         onChange={(e) => handleCreateFormChange('NomineeRelation', e.target.value)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div style={{ gridColumn: '1 / -1' }}>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Additional Info</label>
+                  <textarea value={createForm.AdditionalInfo}
+                            onChange={(e) => handleCreateFormChange('AdditionalInfo', e.target.value)}
+                            rows={2}
+                            style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Reg ID</label>
+                  <input value={createForm.RegId || ''}
+                         onChange={(e) => handleCreateFormChange('RegId', e.target.value || null)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+                <div>
+                  <label style={{ color: '#00234C', fontWeight: 600 }}>Plan ID</label>
+                  <input value={createForm.PlanId || ''}
+                         onChange={(e) => handleCreateFormChange('PlanId', e.target.value || null)}
+                         style={{ width: '100%', padding: '0.5rem', border: '1px solid #00234C', borderRadius: 4 }} />
+                </div>
+
+                {createError && <div style={{ gridColumn: '1 / -1', color: 'crimson' }}>{createError}</div>}
+                <div style={{ gridColumn: '1 / -1', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                  <Button $variant="secondary" onClick={() => { setShowCreate(false); setCreateError(''); }}>Cancel</Button>
+                  <Button $variant="primary" onClick={handleCreate} disabled={creating}>
+                    {creating ? 'Creating…' : 'Create Customer'}
+                  </Button>
+                </div>
+              </div>
             </ModalBody>
           </ModalCard>
         </ModalBackdrop>

@@ -16,6 +16,7 @@ import {
   FiHelpCircle,
   FiChevronLeft,
   FiChevronRight,
+  FiCheckSquare,
 } from 'react-icons/fi';
 
 const SidebarContainer = styled.div.withConfig({
@@ -261,6 +262,7 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       slug: 'customers',
       icon: FiUsers,
       sublinks: [
+        { label: 'Customers Summary', path: 'summary' },
         { label: 'All Customers', path: 'all-customers' },
         { label: 'Active Customers', path: 'active-customers' },
         { label: 'Blocked Customers', path: 'blocked-customers' },
@@ -275,6 +277,14 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
         { label: 'Inventory Status', path: 'inventory-status' },
         { label: 'Availability Matrix', path: 'availability-matrix' },
         { label: 'All Properties', path: 'all-properties' },
+      ],
+    },
+    {
+      label: 'ALLOTMENT',
+      slug: 'allotment',
+      icon: FiCheckSquare,
+      sublinks: [
+        { label: 'New Allotment', path: '' },
       ],
     },
     {
@@ -344,14 +354,10 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       slug: 'settings',
       icon: FiSettings,
       sublinks: [
-        { label: 'Company Settings', path: 'company-settings' },
-        { label: 'Business Rules', path: 'business-rules' },
+        { label: 'Users & Roles', path: 'users-roles' },
         { label: 'Payment Configuration', path: 'payment-configuration' },
         { label: 'Notification Rules', path: 'notification-rules' },
-        { label: 'Users & Roles', path: 'users-roles' },
-        { label: 'Approval Workflows', path: 'approval-workflows' },
         { label: 'System Configuration', path: 'system-configuration' },
-        { label: 'Compliance Configuration (NEW)', path: 'compliance-configuration' },
       ],
     },
     {

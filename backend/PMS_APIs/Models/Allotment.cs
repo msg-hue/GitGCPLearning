@@ -25,34 +25,34 @@ namespace PMS_APIs.Models
         [Column("allotmentdate")]
         public DateTime? AllotmentDate { get; set; }
 
-        [Column("allotment_letter_no")]
+        [NotMapped] // Mark as NotMapped to avoid EF Core trying to query this column
         [StringLength(50)]
         public string? AllotmentLetterNo { get; set; }
 
-        [Column("status")]
+        [NotMapped] // Mark as NotMapped - handle dynamically based on actual column name
         [StringLength(50)]
         public string Status { get; set; } = "Active";
 
-        [Column("created_at")]
+        [NotMapped] // Mark as NotMapped - handle dynamically based on actual column name
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [Column("created_by")]
+        [NotMapped] // Mark as NotMapped - optional field that may not exist
         [StringLength(100)]
         public string? CreatedBy { get; set; }
 
-        [Column("remarks")]
+        [NotMapped] // Mark as NotMapped - optional field that may not exist
         public string? Remarks { get; set; }
 
-        [Column("possession_date")]
+        [NotMapped] // Mark as NotMapped - optional field that may not exist
         public DateOnly? PossessionDate { get; set; }
 
-        [Column("completion_date")]
+        [NotMapped] // Mark as NotMapped - optional field that may not exist
         public DateOnly? CompletionDate { get; set; }
 
-        [Column("balloting_date")]
+        [NotMapped] // Mark as NotMapped - optional field that may not exist
         public DateOnly? BallotingDate { get; set; }
 
-        [Column("ballot_no")]
+        [NotMapped] // Mark as NotMapped - optional field that may not exist
         [StringLength(50)]
         public string? BallotNo { get; set; }
 

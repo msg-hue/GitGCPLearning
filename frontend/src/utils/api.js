@@ -44,7 +44,13 @@ export async function fetchJson(path, options = {}) {
     if (isJson) {
       const base = data.message || '';
       const extra = data.error || data.errors || '';
-      message = [base, extra].filter(Boolean).join(' - ') || JSON.stringify(data);
+      const inner = data.innerException || '';
+      // Include all error details for debugging
+      const errorDetails = [base, extra, inner].filter(Boolean);
+      message = errorDetails.length > 0 
+        ? errorDetails.join(' - ') 
+        : JSON.stringify(data, null, 2);
+      console.error('[API] Error response:', data);
     } else {
       message = data;
     }
@@ -89,6 +95,22 @@ export async function getCustomer(id) {
 }
 
 /**
+ * createCustomer
+ * Purpose: Create a new customer via POST to backend API.
+ * Inputs:
+ *  - payload: object with customer fields (CustomerId is optional, will be auto-generated if not provided)
+ * Outputs:
+ *  - Returns the created customer object from the API
+ */
+export async function createCustomer(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
+  return fetchJson('/api/Customers', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
  * updateCustomer
  * Purpose: Update an existing customer via PUT to backend API.
  * Inputs:
@@ -103,6 +125,21 @@ export async function updateCustomer(id, payload) {
   return fetchJson(`/api/Customers/${encodeURIComponent(id)}`, {
     method: 'PUT',
     body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * deleteCustomer
+ * Purpose: Delete a customer via DELETE to backend API (soft delete - sets status to "Deleted").
+ * Inputs:
+ *  - id: string customer identifier
+ * Outputs:
+ *  - Returns success message
+ */
+export async function deleteCustomer(id) {
+  if (!id) throw new Error('Customer id is required');
+  return fetchJson(`/api/Customers/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
   });
 }
 
@@ -255,6 +292,125 @@ export async function deleteProject(id) {
   return fetchJson(`/api/Projects/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+}
+
+/**
+ * Allotments API
+ * Purpose: CRUD operations for allotments.
+ * Inputs:
+ *  - searchCustomer: customerId string
+ *  - getAvailableProperties: optional projectId string
+ *  - createAllotment: payload object with allotment fields
+ *  - getAllotments: params object with { page, pageSize, customerId, status }
+ * Outputs:
+ *  - JSON responses from backend endpoints.
+ */
+export async function searchCustomerForAllotment(customerId) {
+  if (!customerId) throw new Error('Customer ID is required');
+  return fetchJson(`/api/Allotments/search-customer/${encodeURIComponent(customerId)}`);
+}
+
+export async function getAvailableProperties(projectId = null) {
+  const path = projectId
+    ? `/api/Allotments/available-properties?projectId=${encodeURIComponent(projectId)}`
+    : '/api/Allotments/available-properties';
+  return fetchJson(path);
+}
+
+export async function createAllotment(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
+  return fetchJson('/api/Allotments', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAllotments(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+
+  const path = query.toString()
+    ? `/api/Allotments?${query.toString()}`
+    : '/api/Allotments';
+
+  return fetchJson(path);
+}
+
+/**
+ * Users API
+ * Purpose: CRUD operations for users.
+ * Inputs:
+ *  - getUsers: params object with { page, pageSize, search, isActive, roleId }
+ *  - getUser: id string
+ *  - createUser: payload object with user fields
+ *  - updateUser: id string and payload object
+ *  - deleteUser: id string
+ * Outputs:
+ *  - JSON responses from backend endpoints.
+ */
+export async function getUsers(params = {}) {
+  const query = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null && v !== '') query.append(k, v);
+  });
+
+  const path = query.toString()
+    ? `/api/Users?${query.toString()}`
+    : '/api/Users';
+
+  return fetchJson(path);
+}
+
+export async function getUser(id) {
+  if (!id) throw new Error('User id is required');
+  return fetchJson(`/api/Users/${encodeURIComponent(id)}`);
+}
+
+export async function createUser(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
+  return fetchJson('/api/Users', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateUser(id, payload) {
+  if (!id) throw new Error('User id is required');
+  if (!payload || typeof payload !== 'object') throw new Error('Payload is required');
+  return fetchJson(`/api/Users/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteUser(id) {
+  if (!id) throw new Error('User id is required');
+  return fetchJson(`/api/Users/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Roles API
+ * Purpose: Fetch roles for dropdowns.
+ * Inputs:
+ *  - includeInactive: boolean to include inactive roles
+ * Outputs:
+ *  - Returns array of role objects with RoleId and RoleName
+ */
+export async function getRoles(includeInactive = false) {
+  const query = new URLSearchParams();
+  if (includeInactive) {
+    query.append('includeInactive', 'true');
+  }
+  
+  const path = query.toString()
+    ? `/api/Roles?${query.toString()}`
+    : '/api/Roles';
+  
+  return fetchJson(path);
 }
 
 /**

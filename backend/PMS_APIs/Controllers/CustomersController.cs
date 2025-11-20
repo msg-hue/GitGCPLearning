@@ -116,8 +116,8 @@ namespace PMS_APIs.Controllers
             var parameters = new List<(string Name, object Value)>();
             if (!string.IsNullOrWhiteSpace(search))
             {
-                // Search across present name column and common scalar fields
-                whereClauses.Add($"(({colFullName}) ILIKE @search OR email ILIKE @search OR phone ILIKE @search OR cnic ILIKE @search)");
+                // Search across customer ID, CNIC, and other fields
+                whereClauses.Add($"({colCustomerId} ILIKE @search OR cnic ILIKE @search OR ({colFullName}) ILIKE @search OR email ILIKE @search OR phone ILIKE @search)");
                 parameters.Add(("@search", $"%{search}%"));
             }
             if (!string.IsNullOrWhiteSpace(status))
@@ -624,24 +624,62 @@ namespace PMS_APIs.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> DeleteCustomer(string id)
         {
-            var customer = await _context.Customers.FindAsync(id);
-            if (customer == null)
+            // Normalize ID to handle trailing spaces
+            var normalizedId = id?.Trim() ?? string.Empty;
+            
+            var conn = _context.Database.GetDbConnection();
+            if (conn.State != ConnectionState.Open)
             {
-                return NotFound(new { message = "Customer not found" });
+                await conn.OpenAsync();
+            }
+
+            // Detect column name variant
+            var customerCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            using (var custColsCmd = conn.CreateCommand())
+            {
+                custColsCmd.CommandText = @"SELECT column_name
+                                             FROM information_schema.columns
+                                             WHERE table_schema = current_schema()
+                                               AND table_name = 'customers'
+                                               AND column_name IN ('customer_id','customerid','status')";
+                using var r = await custColsCmd.ExecuteReaderAsync();
+                while (await r.ReadAsync())
+                {
+                    var name = Convert.ToString(r[0]);
+                    if (!string.IsNullOrEmpty(name)) customerCols.Add(name);
+                }
+            }
+
+            var colCustomerId = customerCols.Contains("customer_id") ? "customer_id" : "customerid";
+            var colStatus = "status";
+
+            // Check if customer exists and soft delete
+            using (var checkCmd = conn.CreateCommand())
+            {
+                checkCmd.CommandText = $"SELECT COUNT(*) FROM customers WHERE TRIM(BOTH FROM {colCustomerId}) = @id";
+                var pId = checkCmd.CreateParameter();
+                pId.ParameterName = "@id";
+                pId.Value = normalizedId;
+                checkCmd.Parameters.Add(pId);
+                var exists = Convert.ToInt32(await checkCmd.ExecuteScalarAsync());
+                if (exists == 0)
+                {
+                    return NotFound(new { message = "Customer not found" });
+                }
             }
 
             // Soft delete by updating status
-            customer.Status = "Deleted";
-            
-            try
+            using (var updateCmd = conn.CreateCommand())
             {
-                await _context.SaveChangesAsync();
-                return Ok(new { message = "Customer deleted successfully" });
+                updateCmd.CommandText = $"UPDATE customers SET {colStatus} = 'Deleted' WHERE TRIM(BOTH FROM {colCustomerId}) = @id";
+                var pId = updateCmd.CreateParameter();
+                pId.ParameterName = "@id";
+                pId.Value = normalizedId;
+                updateCmd.Parameters.Add(pId);
+                await updateCmd.ExecuteNonQueryAsync();
             }
-            catch (DbUpdateException ex)
-            {
-                return BadRequest(new { message = "Error deleting customer", error = ex.Message });
-            }
+
+            return Ok(new { message = "Customer deleted successfully" });
         }
 
         /// <summary>
@@ -676,6 +714,79 @@ namespace PMS_APIs.Controllers
             return Ok(allotments);
         }
 
+        /// <summary>
+        /// Get customer statistics (total, active, blocked)
+        /// </summary>
+        /// <returns>Customer statistics</returns>
+        [HttpGet("statistics")]
+        public async Task<ActionResult> GetCustomerStatistics()
+        {
+            try
+            {
+                var conn = _context.Database.GetDbConnection();
+                if (conn.State != ConnectionState.Open)
+                {
+                    await conn.OpenAsync();
+                }
+
+                // Detect column name variant
+                var customerCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                using (var custColsCmd = conn.CreateCommand())
+                {
+                    custColsCmd.CommandText = @"SELECT column_name
+                                                 FROM information_schema.columns
+                                                 WHERE table_schema = current_schema()
+                                                   AND table_name = 'customers'
+                                                   AND column_name IN ('customer_id','customerid','status')";
+                    using var r = await custColsCmd.ExecuteReaderAsync();
+                    while (await r.ReadAsync())
+                    {
+                        var name = Convert.ToString(r[0]);
+                        if (!string.IsNullOrEmpty(name)) customerCols.Add(name);
+                    }
+                }
+
+                var colCustomerId = customerCols.Contains("customer_id") ? "customer_id" : "customerid";
+                var colStatus = "status";
+
+                int totalCustomers = 0;
+                int activeCustomers = 0;
+                int blockedCustomers = 0;
+
+                // Get total count
+                using (var totalCmd = conn.CreateCommand())
+                {
+                    totalCmd.CommandText = $"SELECT COUNT(*) FROM customers";
+                    totalCustomers = Convert.ToInt32(await totalCmd.ExecuteScalarAsync());
+                }
+
+                // Get active count
+                using (var activeCmd = conn.CreateCommand())
+                {
+                    activeCmd.CommandText = $"SELECT COUNT(*) FROM customers WHERE UPPER(TRIM({colStatus})) = 'ACTIVE'";
+                    activeCustomers = Convert.ToInt32(await activeCmd.ExecuteScalarAsync());
+                }
+
+                // Get blocked count
+                using (var blockedCmd = conn.CreateCommand())
+                {
+                    blockedCmd.CommandText = $"SELECT COUNT(*) FROM customers WHERE UPPER(TRIM({colStatus})) = 'BLOCKED'";
+                    blockedCustomers = Convert.ToInt32(await blockedCmd.ExecuteScalarAsync());
+                }
+
+                return Ok(new
+                {
+                    totalCustomers,
+                    activeCustomers,
+                    blockedCustomers
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving customer statistics", error = ex.Message });
+            }
+        }
+
         private bool CustomerExists(string id)
         {
             return _context.Customers.Any(e => e.CustomerId == id);
@@ -689,12 +800,37 @@ namespace PMS_APIs.Controllers
 
             if (lastCustomer == null)
             {
-                return "CUS0000001";
+                return "CUST001";
             }
 
-            var lastIdNumber = int.Parse(lastCustomer.CustomerId.Substring(3));
-            var newIdNumber = lastIdNumber + 1;
-            return $"CUS{newIdNumber:D7}";
+            // Handle different ID formats: CUST001, C0000001, CUS0000001, etc.
+            var lastId = lastCustomer.CustomerId?.Trim() ?? string.Empty;
+            
+            // Try to match CUST### format first (e.g., CUST001, CUST002)
+            if (lastId.StartsWith("CUST", StringComparison.OrdinalIgnoreCase) && lastId.Length >= 7)
+            {
+                var numberPart = lastId.Substring(4).TrimStart('0');
+                if (int.TryParse(numberPart, out int lastNum))
+                {
+                    var newNum = lastNum + 1;
+                    return $"CUST{newNum:D3}"; // Format as CUST001, CUST002, etc.
+                }
+            }
+            
+            // Try to match C### format (e.g., C0000001)
+            if (lastId.StartsWith("C", StringComparison.OrdinalIgnoreCase) && lastId.Length > 1)
+            {
+                var numberPart = lastId.Substring(1).TrimStart('0');
+                if (int.TryParse(numberPart, out int lastNum))
+                {
+                    var newNum = lastNum + 1;
+                    // Use CUST### format for consistency
+                    return $"CUST{newNum:D3}";
+                }
+            }
+            
+            // Default: start with CUST001
+            return "CUST001";
         }
     }
 }

@@ -80,9 +80,13 @@ export default function ModuleRouter() {
   // Map of module/view to components. Extend as new pages are added.
   const routes = {
     customers: {
+      'summary': React.lazy(() => import('./customers/CustomersSummary')),
       'all-customers': React.lazy(() => import('./customers/AllCustomers')),
       'active-customers': React.lazy(() => import('./customers/ActiveCustomers')),
       'blocked-customers': React.lazy(() => import('./customers/BlockedCustomers')),
+    },
+    allotment: {
+      '': React.lazy(() => import('./Allotment')),
     },
     property: {
       projects: React.lazy(() => import('./property/Projects')),
@@ -149,7 +153,9 @@ export default function ModuleRouter() {
     },
   };
 
-  const Mod = routes[module]?.[view];
+  // Handle both undefined view and empty string view
+  const viewKey = view || '';
+  const Mod = routes[module]?.[viewKey];
   if (Mod) {
     return (
       <React.Suspense 
@@ -167,7 +173,7 @@ export default function ModuleRouter() {
   return (
     <Container>
       <Title>{title}</Title>
-      <div>This section is a placeholder for “{title}”.</div>
+      <div>This section is a placeholder for "{title}".</div>
       <Badge>{detail}</Badge>
     </Container>
   );

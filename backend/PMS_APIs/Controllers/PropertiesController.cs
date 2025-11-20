@@ -266,6 +266,21 @@ namespace PMS_APIs.Controllers
                     await conn.OpenAsync();
                 }
 
+                // Check if status column exists
+                bool statusColumnExists = false;
+                using (var checkCmd = conn.CreateCommand())
+                {
+                    checkCmd.CommandText = @"
+                        SELECT EXISTS (
+                            SELECT 1 
+                            FROM information_schema.columns 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'property' 
+                            AND column_name = 'status'
+                        )";
+                    statusColumnExists = Convert.ToBoolean(await checkCmd.ExecuteScalarAsync());
+                }
+
                 // Get summary statistics using raw SQL to avoid type mapping issues
                 int totalProperties = 0;
                 int availableProperties = 0;
@@ -274,12 +289,24 @@ namespace PMS_APIs.Controllers
 
                 using (var statsCmd = conn.CreateCommand())
                 {
-                    statsCmd.CommandText = @"SELECT 
-                                                COUNT(*) as total,
-                                                COUNT(*) FILTER (WHERE status = 'Available') as available,
-                                                COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
-                                                COUNT(*) FILTER (WHERE status = 'Sold') as sold
-                                              FROM property";
+                    if (statusColumnExists)
+                    {
+                        statsCmd.CommandText = @"SELECT 
+                                                    COUNT(*) as total,
+                                                    COUNT(*) FILTER (WHERE status = 'Available') as available,
+                                                    COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
+                                                    COUNT(*) FILTER (WHERE status = 'Sold') as sold
+                                                  FROM property";
+                    }
+                    else
+                    {
+                        statsCmd.CommandText = @"SELECT 
+                                                    COUNT(*) as total,
+                                                    COUNT(*) as available,
+                                                    0 as allotted,
+                                                    0 as sold
+                                                  FROM property";
+                    }
                     using var reader = await statsCmd.ExecuteReaderAsync();
                     if (await reader.ReadAsync())
                     {
@@ -294,15 +321,30 @@ namespace PMS_APIs.Controllers
                 var projectStats = new List<object>();
                 using (var projectStatsCmd = conn.CreateCommand())
                 {
-                    projectStatsCmd.CommandText = @"SELECT 
-                                                        projectid::text as projectid,
-                                                        COUNT(*) as total,
-                                                        COUNT(*) FILTER (WHERE status = 'Available') as available,
-                                                        COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
-                                                        COUNT(*) FILTER (WHERE status = 'Sold') as sold
-                                                     FROM property
-                                                     WHERE projectid IS NOT NULL
-                                                     GROUP BY projectid";
+                    if (statusColumnExists)
+                    {
+                        projectStatsCmd.CommandText = @"SELECT 
+                                                            projectid::text as projectid,
+                                                            COUNT(*) as total,
+                                                            COUNT(*) FILTER (WHERE status = 'Available') as available,
+                                                            COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
+                                                            COUNT(*) FILTER (WHERE status = 'Sold') as sold
+                                                         FROM property
+                                                         WHERE projectid IS NOT NULL
+                                                         GROUP BY projectid";
+                    }
+                    else
+                    {
+                        projectStatsCmd.CommandText = @"SELECT 
+                                                            projectid::text as projectid,
+                                                            COUNT(*) as total,
+                                                            COUNT(*) as available,
+                                                            0 as allotted,
+                                                            0 as sold
+                                                         FROM property
+                                                         WHERE projectid IS NOT NULL
+                                                         GROUP BY projectid";
+                    }
                     using var reader = await projectStatsCmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {
@@ -348,8 +390,20 @@ namespace PMS_APIs.Controllers
                     await conn.OpenAsync();
                 }
 
-                // Get all projects
-                var projects = await _context.Projects.ToListAsync();
+                // Get all projects (without loading navigation properties to avoid status column issues)
+                // Note: projects table doesn't have status column, so we exclude it
+                var projects = await _context.Projects
+                    .AsNoTracking()
+                    .Select(p => new Project
+                    {
+                        ProjectId = p.ProjectId,
+                        ProjectName = p.ProjectName,
+                        Type = p.Type,
+                        Location = p.Location,
+                        Description = p.Description,
+                        CreatedAt = p.CreatedAt
+                    })
+                    .ToListAsync();
 
                 // Get summary statistics using raw SQL
                 int totalProperties = 0;
@@ -357,14 +411,41 @@ namespace PMS_APIs.Controllers
                 int allottedProperties = 0;
                 int soldProperties = 0;
 
+                // Check if status column exists
+                bool statusColumnExists = false;
+                using (var checkCmd = conn.CreateCommand())
+                {
+                    checkCmd.CommandText = @"
+                        SELECT EXISTS (
+                            SELECT 1 
+                            FROM information_schema.columns 
+                            WHERE table_schema = 'public' 
+                            AND table_name = 'property' 
+                            AND column_name = 'status'
+                        )";
+                    statusColumnExists = Convert.ToBoolean(await checkCmd.ExecuteScalarAsync());
+                }
+
                 using (var statsCmd = conn.CreateCommand())
                 {
-                    statsCmd.CommandText = @"SELECT 
-                                                COUNT(*) as total,
-                                                COUNT(*) FILTER (WHERE status = 'Available') as available,
-                                                COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
-                                                COUNT(*) FILTER (WHERE status = 'Sold') as sold
-                                              FROM property";
+                    if (statusColumnExists)
+                    {
+                        statsCmd.CommandText = @"SELECT 
+                                                    COUNT(*) as total,
+                                                    COUNT(*) FILTER (WHERE status = 'Available') as available,
+                                                    COUNT(*) FILTER (WHERE status = 'Allotted') as allotted,
+                                                    COUNT(*) FILTER (WHERE status = 'Sold') as sold
+                                                  FROM property";
+                    }
+                    else
+                    {
+                        statsCmd.CommandText = @"SELECT 
+                                                    COUNT(*) as total,
+                                                    COUNT(*) as available,
+                                                    0 as allotted,
+                                                    0 as sold
+                                                  FROM property";
+                    }
                     using var reader = await statsCmd.ExecuteReaderAsync();
                     if (await reader.ReadAsync())
                     {
@@ -380,20 +461,40 @@ namespace PMS_APIs.Controllers
                 var allProperties = new List<Property>();
                 using (var propsCmd = conn.CreateCommand())
                 {
-                    propsCmd.CommandText = @"SELECT 
-                                                propertyid::text as propertyid, 
-                                                projectid::text as projectid, 
-                                                plotno::text as plotno, 
-                                                street::text as street, 
-                                                plottype::text as plottype, 
-                                                block::text as block, 
-                                                propertytype::text as propertytype, 
-                                                size::text as size, 
-                                                status::text as status, 
-                                                createdat::timestamp as createdat, 
-                                                additionalinfo::text as additionalinfo
-                                             FROM property
-                                             ORDER BY projectid, block, plotno";
+                    if (statusColumnExists)
+                    {
+                        propsCmd.CommandText = @"SELECT 
+                                                    propertyid::text as propertyid, 
+                                                    projectid::text as projectid, 
+                                                    plotno::text as plotno, 
+                                                    street::text as street, 
+                                                    plottype::text as plottype, 
+                                                    block::text as block, 
+                                                    propertytype::text as propertytype, 
+                                                    size::text as size, 
+                                                    status::text as status, 
+                                                    createdat::timestamp as createdat, 
+                                                    additionalinfo::text as additionalinfo
+                                                 FROM property
+                                                 ORDER BY projectid, block, plotno";
+                    }
+                    else
+                    {
+                        propsCmd.CommandText = @"SELECT 
+                                                    propertyid::text as propertyid, 
+                                                    projectid::text as projectid, 
+                                                    plotno::text as plotno, 
+                                                    street::text as street, 
+                                                    plottype::text as plottype, 
+                                                    block::text as block, 
+                                                    propertytype::text as propertytype, 
+                                                    size::text as size, 
+                                                    'Available'::text as status, 
+                                                    createdat::timestamp as createdat, 
+                                                    additionalinfo::text as additionalinfo
+                                                 FROM property
+                                                 ORDER BY projectid, block, plotno";
+                    }
                     using var reader = await propsCmd.ExecuteReaderAsync();
                     while (await reader.ReadAsync())
                     {

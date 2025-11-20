@@ -19,14 +19,6 @@ passwordhash VARCHAR(256) NOT NULL
 roleid VARCHAR(10)
 isactive BOOLEAN DEFAULT true
 createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-FOREIGN KEY roleid REFERENCES roles(roleid) ON DELETE SET NULL
-
-roles
-roleid VARCHAR(10) PRIMARY KEY
-rolename VARCHAR(100) NOT NULL
-description TEXT
-isactive BOOLEAN DEFAULT true
-createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 
 customers
 customerid VARCHAR(10) PRIMARY KEY
@@ -269,7 +261,6 @@ CONSTRAINTS:
 
 PRIMARY KEY CONSTRAINTS:
 PK_users: users.userid
-PK_roles: roles.roleid
 PK_customers: customers.customerid
 PK_property: property.propertyid
 PK_projects: projects.projectid
@@ -287,7 +278,6 @@ PK_refunds: refunds.refund_id
 PK_ndcs: ndcs.ndc_id
 
 FOREIGN KEY CONSTRAINTS:
-FK_users_roleid: users.roleid -> roles.roleid ON DELETE SET NULL
 FK_customers_regid: customers.regid -> registration.reg_id ON DELETE SET NULL
 FK_customers_planid: customers.planid -> paymentplan.planid ON DELETE SET NULL
 FK_allotment_customerid: allotment.customerid -> customers.customerid ON DELETE SET NULL
@@ -318,8 +308,6 @@ users.userid NOT NULL
 users.fullname NOT NULL
 users.email NOT NULL
 users.passwordhash NOT NULL
-roles.roleid NOT NULL
-roles.rolename NOT NULL
 customers.customerid NOT NULL
 customers.createdat NOT NULL
 property.propertyid NOT NULL
@@ -362,8 +350,6 @@ ndcs.created_at NOT NULL
 DEFAULT VALUES:
 users.isactive DEFAULT true
 users.createdat DEFAULT CURRENT_TIMESTAMP
-roles.isactive DEFAULT true
-roles.createdat DEFAULT CURRENT_TIMESTAMP
 customers.createdat DEFAULT CURRENT_TIMESTAMP
 customers.status DEFAULT 'Active'
 property.status DEFAULT 'Available'

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiCheckCircle, FiSlash, FiTrendingUp } from 'react-icons/fi';
+import { fetchJson } from '../utils/api';
 
 const Wrap = styled.div`
   padding: 1.5rem;
@@ -124,6 +125,52 @@ export default function Dashboard() {
     { label: 'Active Customers', value: 950, icon: FiTrendingUp },
   ];
 
+  // Property statistics state
+  const [propertyStats, setPropertyStats] = useState({
+    totalProperties: 0,
+    availableProperties: 0,
+    allottedProperties: 0,
+    soldProperties: 0,
+  });
+  const [loadingProperties, setLoadingProperties] = useState(true);
+
+  // Fetch property statistics
+  useEffect(() => {
+    async function fetchPropertyStats() {
+      try {
+        setLoadingProperties(true);
+        const data = await fetchJson('/api/Properties/statistics');
+        setPropertyStats({
+          totalProperties: data.totalProperties || 0,
+          availableProperties: data.availableProperties || 0,
+          allottedProperties: data.allottedProperties || 0,
+          soldProperties: data.soldProperties || 0,
+        });
+      } catch (error) {
+        console.error('Error fetching property statistics:', error);
+        // Keep default values on error
+      } finally {
+        setLoadingProperties(false);
+      }
+    }
+
+    fetchPropertyStats();
+  }, []);
+
+  // Prepare property status data for chart
+  const propertyStatusData = [
+    { label: 'Available', value: propertyStats.availableProperties, color: '#4CAF50' }, // Green
+    { label: 'Allotted', value: propertyStats.allottedProperties, color: themePrimary }, // Orange
+    { label: 'Sold', value: propertyStats.soldProperties, color: themeSecondary }, // Blue
+  ].filter(item => item.value > 0); // Only show statuses with values > 0
+
+  // Prepare property status data for bar chart with colors
+  const propertyBarData = [
+    { label: 'Available', value: propertyStats.availableProperties, color: '#4CAF50' }, // Green
+    { label: 'Allotted', value: propertyStats.allottedProperties, color: themePrimary }, // Orange
+    { label: 'Sold', value: propertyStats.soldProperties, color: themeSecondary }, // Blue
+  ];
+
   return (
     <Wrap>
       <Header>
@@ -157,6 +204,54 @@ export default function Dashboard() {
               <LegendItem key={s.label}><LegendSwatch $color={s.color} /> {s.label}</LegendItem>
             ))}
           </Legend>
+        </ChartCard>
+
+        <ChartCard>
+          <SectionTitle>Property Status Distribution</SectionTitle>
+          <SectionNote>
+            {loadingProperties ? 'Loading...' : `Total: ${propertyStats.totalProperties} properties`}
+          </SectionNote>
+          {loadingProperties ? (
+            <LoadingText>Loading property data...</LoadingText>
+          ) : propertyStatusData.length > 0 ? (
+            <>
+              <PieChart width={360} height={280} data={propertyStatusData} />
+              <Legend>
+                {propertyStatusData.map(s => (
+                  <LegendItem key={s.label}>
+                    <LegendSwatch $color={s.color} /> {s.label} ({s.value})
+                  </LegendItem>
+                ))}
+              </Legend>
+            </>
+          ) : (
+            <LoadingText>No property data available</LoadingText>
+          )}
+        </ChartCard>
+
+        <ChartCard>
+          <SectionTitle>Property Status by Count</SectionTitle>
+          <SectionNote>Bar chart showing property status breakdown</SectionNote>
+          {loadingProperties ? (
+            <LoadingText>Loading property data...</LoadingText>
+          ) : propertyStats.totalProperties > 0 ? (
+            <>
+              <BarChart 
+                width={720} 
+                height={280} 
+                data={propertyBarData} 
+                color={themePrimary} 
+                axisColor="#dddddd" 
+              />
+              <Legend>
+                <LegendItem><LegendSwatch $color="#4CAF50" /> Available</LegendItem>
+                <LegendItem><LegendSwatch $color={themePrimary} /> Allotted</LegendItem>
+                <LegendItem><LegendSwatch $color={themeSecondary} /> Sold</LegendItem>
+              </Legend>
+            </>
+          ) : (
+            <LoadingText>No property data available</LoadingText>
+          )}
         </ChartCard>
       </ChartsGrid>
     </Wrap>
@@ -223,6 +318,13 @@ const LegendSwatch = styled.span`
   background: ${p => p.$color};
 `;
 
+const LoadingText = styled.div`
+  text-align: center;
+  color: ${p => p.theme.colors.gray};
+  font-size: 0.9rem;
+  padding: 2rem;
+`;
+
 // Static bar chart data (months vs paid counts)
 const barData = [
   { label: 'May', value: 620 },
@@ -246,8 +348,8 @@ const pieData = [
  * Inputs:
  *  - width: number — chart width in px for viewBox
  *  - height: number — chart height in px for viewBox
- *  - data: array — items like { label, value }
- *  - color: string — bar fill color (brand primary recommended)
+ *  - data: array — items like { label, value, color? } (color is optional, falls back to default)
+ *  - color: string — default bar fill color (brand primary recommended)
  *  - axisColor: string — axis line color
  * Outputs: An SVG bar chart with axes and labels.
  */
@@ -284,9 +386,10 @@ function BarChart({ width = 720, height = 280, data = [], color = themePrimary, 
         {data.map((d, i) => {
           const x = i * xStep + (xStep - barW) / 2;
           const h = innerH - yScale(Number(d.value || 0));
+          const barColor = d.color || color; // Use item color if provided, otherwise use default
           return (
             <g key={`bar-${d.label}`}>
-              <rect x={x} y={yScale(d.value)} width={barW} height={h} fill={color} rx={4} />
+              <rect x={x} y={yScale(d.value)} width={barW} height={h} fill={barColor} rx={4} />
               <text x={x + barW / 2} y={innerH + 18} fill="#888" fontSize="11" textAnchor="middle">{d.label}</text>
               <text x={x + barW / 2} y={yScale(d.value) - 6} fill={themeSecondary} fontSize="11" textAnchor="middle">{d.value}</text>
             </g>

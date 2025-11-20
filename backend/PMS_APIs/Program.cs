@@ -9,8 +9,18 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 
-// Add API Controllers
-builder.Services.AddControllers();
+// Add API Controllers with JSON options
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Allow case-insensitive property matching (accepts both camelCase and PascalCase)
+        options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
+        // Keep PascalCase for JSON (matches C# DTOs)
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
+        // Allow reading comments and trailing commas
+        options.JsonSerializerOptions.ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip;
+        options.JsonSerializerOptions.AllowTrailingCommas = true;
+    });
 
 // Add Swagger/OpenAPI support
 builder.Services.AddEndpointsApiExplorer();
@@ -199,6 +209,16 @@ app.MapGet("/api", () => new {
 
 // Add a simple test endpoint
 app.MapGet("/api/test", () => new { message = "PMS API is working correctly!" });
+
+// Temporary endpoint to test roles (remove after RolesController is working)
+app.MapGet("/api/roles-test", async (PmsDbContext db) => {
+    try {
+        var count = await db.Roles.CountAsync();
+        return Results.Ok(new { message = "Roles table accessible", count = count });
+    } catch (Exception ex) {
+        return Results.Ok(new { message = "Error accessing roles", error = ex.Message });
+    }
+}).RequireAuthorization();
 // ========== END OF ADDED ENDPOINTS ==========
 
 // Map API controllers
