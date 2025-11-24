@@ -568,9 +568,6 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
         <HeaderLeft>
           <Title>{title}</Title>
           <Actions>
-            <Button onClick={() => navigate('/customers/all-customers')}>All</Button>
-            <Button onClick={() => navigate('/customers/active-customers')}>Active</Button>
-            <Button onClick={() => navigate('/customers/blocked-customers')}>Blocked</Button>
             <Select
               value={statusFilter}
               onChange={(e) => { setPage(1); setStatusFilter(e.target.value); }}
@@ -597,7 +594,6 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
           <Button $variant="primary" onClick={() => setShowCreate(true)}>
             + New Customer
           </Button>
-          <DetailText>Customers Detail</DetailText>
         </HeaderRight>
       </Header>
 

@@ -297,9 +297,6 @@ export default function CustomersPage() {
         <HeaderLeft>
           <Title>Customers</Title>
           <Actions>
-            <Button onClick={() => navigate('/customers/all-customers')}>All</Button>
-            <Button onClick={() => navigate('/customers/active-customers')}>Active</Button>
-            <Button onClick={() => navigate('/customers/blocked-customers')}>Blocked</Button>
             {/* Status filter dropdown */}
             <Select
               value={statusFilter}
@@ -325,7 +322,6 @@ export default function CustomersPage() {
           </Actions>
         </HeaderLeft>
         <HeaderRight>
-          <DetailText>Customers Detail</DetailText>
         </HeaderRight>
       </Header>
 
