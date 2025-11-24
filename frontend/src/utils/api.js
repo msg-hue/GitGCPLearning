@@ -10,10 +10,13 @@ import { API_BASE_URL } from '../config';
  *  - Resolves to parsed JSON response or throws error with context
  */
 export async function fetchJson(path, options = {}) {
-  const baseUrl = API_BASE_URL;
+  // Normalize baseUrl: remove trailing slash
+  const baseUrl = API_BASE_URL.replace(/\/+$/, '');
+  // Ensure path starts with /
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   
   // Debug: Log the full URL being called
-  const fullUrl = `${baseUrl}${path}`;
+  const fullUrl = `${baseUrl}${normalizedPath}`;
   console.log('[API] Calling:', fullUrl, 'Base URL:', baseUrl);
 
   const headers = {

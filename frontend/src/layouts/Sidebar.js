@@ -285,6 +285,7 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       icon: FiCheckSquare,
       sublinks: [
         { label: 'New Allotment', path: '' },
+        { label: 'All Allotments', path: 'all-allotments' },
       ],
     },
     {
