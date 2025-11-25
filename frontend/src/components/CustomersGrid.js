@@ -33,7 +33,7 @@ const HeaderRight = styled.div`
 const Title = styled.h2`
   margin: 0;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: ${p => p.theme.colors.secondary};
 `;
 
@@ -63,7 +63,7 @@ const Th = styled.th`
   background: ${props => props.theme.colors.lightGray};
   color: ${props => props.theme.colors.secondary};
   font-weight: 600;
-  font-size: 0.95rem; /* slightly lesser for compact header */
+  font-size: 0.8rem;
 `;
 
 const Td = styled.td`
@@ -72,13 +72,14 @@ const Td = styled.td`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.8rem;
 `;
 
 const StatusBadge = styled.span`
   display: inline-block;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: white;
   background: ${props => props.status === 'Active' ? props.theme.colors.primary : '#d9534f'};
 `;
@@ -132,7 +133,7 @@ const SearchInput = styled.input`
   padding: 0.5rem 0.75rem;
   border: 1px solid ${props => props.theme.colors.secondary};
   border-radius: 4px;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   max-width: 400px;
   &:focus {
     outline: none;
@@ -144,7 +145,7 @@ const SearchInput = styled.input`
 const SearchLabel = styled.label`
   color: ${props => props.theme.colors.secondary};
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   white-space: nowrap;
 `;
 
@@ -201,6 +202,55 @@ const CloseButton = styled.button`
  * Outputs:
  *  - Renders a paginated table with server-side and client-side filters.
  */
+// Available column definitions
+const AVAILABLE_COLUMNS = [
+  { id: 'customerId', label: 'Customer ID', field: 'CustomerId', width: '12%', defaultVisible: true },
+  { id: 'fullName', label: 'Full Name', field: 'FullName', width: '18%', defaultVisible: true },
+  { id: 'cnic', label: 'CNIC', field: 'Cnic', width: '14%', defaultVisible: true },
+  { id: 'gender', label: 'Gender', field: 'Gender', width: '10%', defaultVisible: true },
+  { id: 'email', label: 'Email', field: 'Email', width: '26%', defaultVisible: true },
+  { id: 'phone', label: 'Phone', field: 'Phone', width: '12%', defaultVisible: true },
+  { id: 'status', label: 'Status', field: 'Status', width: '8%', defaultVisible: true },
+  { id: 'fatherName', label: 'Father Name', field: 'FatherName', width: '15%', defaultVisible: false },
+  { id: 'passportNo', label: 'Passport No', field: 'PassportNo', width: '12%', defaultVisible: false },
+  { id: 'dob', label: 'Date of Birth', field: 'Dob', width: '12%', defaultVisible: false },
+  { id: 'city', label: 'City', field: 'City', width: '12%', defaultVisible: false },
+  { id: 'country', label: 'Country', field: 'Country', width: '12%', defaultVisible: false },
+  { id: 'subProject', label: 'Sub Project', field: 'SubProject', width: '12%', defaultVisible: false },
+  { id: 'registeredSize', label: 'Registered Size', field: 'RegisteredSize', width: '12%', defaultVisible: false },
+  { id: 'regId', label: 'Reg ID', field: 'RegId', width: '10%', defaultVisible: false },
+  { id: 'planId', label: 'Plan ID', field: 'PlanId', width: '10%', defaultVisible: false },
+  { id: 'allotmentStatus', label: 'Allotment Status', field: 'AllotmentStatus', width: '12%', defaultVisible: false },
+  { id: 'createdAt', label: 'Created At', field: 'CreatedAt', width: '12%', defaultVisible: false },
+];
+
+// Load column preferences from localStorage
+const loadColumnPreferences = () => {
+  try {
+    const saved = localStorage.getItem('customersGrid_columns');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load column preferences:', e);
+  }
+  // Return default visible columns
+  return AVAILABLE_COLUMNS.map(col => ({
+    id: col.id,
+    visible: col.defaultVisible,
+    order: AVAILABLE_COLUMNS.indexOf(col)
+  }));
+};
+
+// Save column preferences to localStorage
+const saveColumnPreferences = (preferences) => {
+  try {
+    localStorage.setItem('customersGrid_columns', JSON.stringify(preferences));
+  } catch (e) {
+    console.error('Failed to save column preferences:', e);
+  }
+};
+
 export default function CustomersGrid({ title = 'Customers', defaultFilter = 'All' }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -224,6 +274,8 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
   const [expandedPlanId, setExpandedPlanId] = useState('');
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showColumnConfig, setShowColumnConfig] = useState(false);
+  const [columnPreferences, setColumnPreferences] = useState(() => loadColumnPreferences());
   const [createForm, setCreateForm] = useState({
     FullName: '',
     FatherName: '',
@@ -252,6 +304,102 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
   const [createError, setCreateError] = useState('');
 
   const routeFilter = useMemo(() => defaultFilter, [defaultFilter]);
+
+  // Get visible columns in order
+  const visibleColumns = useMemo(() => {
+    const prefs = columnPreferences;
+    return AVAILABLE_COLUMNS
+      .map((col, index) => ({
+        ...col,
+        order: prefs.find(p => p.id === col.id)?.order ?? index,
+        visible: prefs.find(p => p.id === col.id)?.visible ?? col.defaultVisible
+      }))
+      .filter(col => col.visible)
+      .sort((a, b) => a.order - b.order);
+  }, [columnPreferences]);
+
+  // Handle column visibility toggle
+  const toggleColumnVisibility = (columnId) => {
+    setColumnPreferences(prev => {
+      const existing = prev.find(p => p.id === columnId);
+      const isCurrentlyVisible = existing?.visible ?? AVAILABLE_COLUMNS.find(c => c.id === columnId)?.defaultVisible ?? false;
+      const willBeVisible = !isCurrentlyVisible;
+      
+      let updated;
+      if (existing) {
+        updated = prev.map(p => 
+          p.id === columnId ? { ...p, visible: willBeVisible } : p
+        );
+      } else {
+        const col = AVAILABLE_COLUMNS.find(c => c.id === columnId);
+        updated = [...prev, {
+          id: columnId,
+          visible: willBeVisible,
+          order: col ? AVAILABLE_COLUMNS.indexOf(col) : prev.length
+        }];
+      }
+      
+      // Recalculate orders for visible columns
+      const visiblePrefs = updated.filter(p => p.visible).sort((a, b) => {
+        const aIndex = AVAILABLE_COLUMNS.findIndex(c => c.id === a.id);
+        const bIndex = AVAILABLE_COLUMNS.findIndex(c => c.id === b.id);
+        return a.order - b.order || aIndex - bIndex;
+      });
+      visiblePrefs.forEach((p, index) => {
+        p.order = index;
+      });
+      
+      // Update the full array with new orders
+      updated = updated.map(p => {
+        const visiblePref = visiblePrefs.find(vp => vp.id === p.id);
+        return visiblePref ? { ...p, order: visiblePref.order } : p;
+      });
+      
+      saveColumnPreferences(updated);
+      return updated;
+    });
+  };
+
+  // Handle column reordering
+  const moveColumn = (columnId, direction) => {
+    setColumnPreferences(prev => {
+      // Get only visible columns with their orders
+      const visiblePrefs = prev
+        .filter(p => p.visible)
+        .sort((a, b) => a.order - b.order);
+      
+      const currentIndex = visiblePrefs.findIndex(p => p.id === columnId);
+      if (currentIndex === -1) return prev;
+      
+      const newIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+      if (newIndex < 0 || newIndex >= visiblePrefs.length) return prev;
+      
+      // Swap orders
+      const tempOrder = visiblePrefs[currentIndex].order;
+      visiblePrefs[currentIndex].order = visiblePrefs[newIndex].order;
+      visiblePrefs[newIndex].order = tempOrder;
+      
+      // Update the full preferences array
+      const updated = prev.map(p => {
+        const visiblePref = visiblePrefs.find(vp => vp.id === p.id);
+        return visiblePref ? { ...p, order: visiblePref.order } : p;
+      });
+      
+      saveColumnPreferences(updated);
+      return updated;
+    });
+  };
+
+  // Reset to default columns
+  const resetColumns = () => {
+    const defaultPrefs = AVAILABLE_COLUMNS.map((col, index) => ({
+      id: col.id,
+      visible: col.defaultVisible,
+      order: index
+    }));
+    setColumnPreferences(defaultPrefs);
+    saveColumnPreferences(defaultPrefs);
+  };
 
   /**
    * toText
@@ -566,7 +714,6 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
     <PageContainer>
       <Header>
         <HeaderLeft>
-          <Title>{title}</Title>
           <Actions>
             <Select
               value={statusFilter}
@@ -591,6 +738,9 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
           </Actions>
         </HeaderLeft>
         <HeaderRight>
+          <Button onClick={() => setShowColumnConfig(true)} style={{ marginRight: '0.5rem' }}>
+            Columns
+          </Button>
           <Button $variant="primary" onClick={() => setShowCreate(true)}>
             + New Customer
           </Button>
@@ -629,23 +779,15 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
       {!loading && !error && (
         <Table>
           <colgroup>
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '18%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '10%' }} />
-            <col style={{ width: '26%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '8%' }} />
+            {visibleColumns.map(col => (
+              <col key={col.id} style={{ width: col.width }} />
+            ))}
           </colgroup>
           <thead>
             <tr>
-              <Th>Customer ID</Th>
-              <Th>Full Name</Th>
-              <Th>CNIC</Th>
-              <Th>Gender</Th>
-              <Th>Email</Th>
-              <Th>Phone</Th>
-              <Th>Status</Th>
+              {visibleColumns.map(col => (
+                <Th key={col.id}>{col.label}</Th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -661,21 +803,36 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
                     style={{ cursor: 'pointer' }}
                     title="Double-click to open details"
                   >
-                    <Td>{toText(rowId)}</Td>
-                    <Td>{toText(c.FullName || c.fullName || c.full_name || c.Name || c.name)}</Td>
-                    <Td>{toText(c.Cnic || c.cnic)}</Td>
-                    <Td>{toText((c.Gender ?? c.gender ?? '')) || '—'}</Td>
-                    <Td>{toText(c.Email || c.email)}</Td>
-                    <Td>{toText(c.Phone || c.phone)}</Td>
-                    <Td>
-                      <StatusBadge status={(c.Status || c.status || (c.IsActive === true ? 'Active' : c.IsActive === false ? 'Blocked' : 'Unknown'))}>
-                        {c.Status || c.status || (c.IsActive === true ? 'Active' : c.IsActive === false ? 'Blocked' : 'Unknown')}
-                      </StatusBadge>
-                    </Td>
+                    {visibleColumns.map(col => {
+                      let cellValue = '';
+                      if (col.id === 'status') {
+                        return (
+                          <Td key={col.id}>
+                            <StatusBadge status={(c.Status || c.status || (c.IsActive === true ? 'Active' : c.IsActive === false ? 'Blocked' : 'Unknown'))}>
+                              {c.Status || c.status || (c.IsActive === true ? 'Active' : c.IsActive === false ? 'Blocked' : 'Unknown')}
+                            </StatusBadge>
+                          </Td>
+                        );
+                      } else if (col.id === 'customerId') {
+                        cellValue = toText(rowId);
+                      } else if (col.id === 'fullName') {
+                        cellValue = toText(c.FullName || c.fullName || c.full_name || c.Name || c.name);
+                      } else if (col.id === 'dob') {
+                        const dob = c.Dob || c.dob;
+                        cellValue = dob ? (typeof dob === 'string' ? dob.slice(0, 10) : new Date(dob).toISOString().slice(0, 10)) : '—';
+                      } else if (col.id === 'createdAt') {
+                        const createdAt = c.CreatedAt || c.createdAt || c.created_at;
+                        cellValue = createdAt ? (typeof createdAt === 'string' ? createdAt.slice(0, 10) : new Date(createdAt).toISOString().slice(0, 10)) : '—';
+                      } else {
+                        const fieldValue = c[col.field] || c[col.field.toLowerCase()] || c[col.field.toUpperCase()];
+                        cellValue = toText(fieldValue) || '—';
+                      }
+                      return <Td key={col.id}>{cellValue}</Td>;
+                    })}
                   </tr>
                   {isExpanded && expandedPlanId && (
                     <tr>
-                      <Td colSpan={7} style={{ background: '#fff' }}>
+                      <Td colSpan={visibleColumns.length} style={{ background: '#fff' }}>
                         <div style={{ borderTop: '1px solid #eee', paddingTop: '0.5rem' }}>
                           <PaymentSchedules defaultPlanId={expandedPlanId} />
                         </div>
@@ -687,7 +844,7 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
             })}
             {filtered.length === 0 && (
               <tr>
-                <Td colSpan="7">No customers found.</Td>
+                <Td colSpan={visibleColumns.length}>No customers found.</Td>
               </tr>
             )}
           </tbody>
@@ -696,11 +853,8 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
 
       {!loading && !error && (
         <Footer>
-          <div>
-            Showing {filtered.length} of {totalCount} customers
-          </div>
+          <div></div>
           <Pager>
-            <span>Rows per page:</span>
             <Select
               value={pageSize}
               onChange={(e) => {
@@ -1017,6 +1171,85 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
                     {creating ? 'Creating…' : 'Create Customer'}
                   </Button>
                 </div>
+              </div>
+            </ModalBody>
+          </ModalCard>
+        </ModalBackdrop>
+      )}
+
+      {showColumnConfig && (
+        <ModalBackdrop onClick={() => setShowColumnConfig(false)}>
+          <ModalCard onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+            <ModalHeader>
+              <span>Configure Columns</span>
+              <CloseButton onClick={() => setShowColumnConfig(false)}>Close</CloseButton>
+            </ModalHeader>
+            <ModalBody>
+              <div style={{ marginBottom: '1rem' }}>
+                <Button onClick={resetColumns} style={{ marginBottom: '1rem' }}>
+                  Reset to Default
+                </Button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '60vh', overflowY: 'auto' }}>
+                {AVAILABLE_COLUMNS.map((col) => {
+                  const pref = columnPreferences.find(p => p.id === col.id) || {
+                    id: col.id,
+                    visible: col.defaultVisible,
+                    order: AVAILABLE_COLUMNS.indexOf(col)
+                  };
+                  const isVisible = pref.visible;
+                  const currentOrder = pref.order;
+                  const visibleCount = columnPreferences.filter(p => p.visible).length;
+                  
+                  return (
+                    <div
+                      key={col.id}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.5rem',
+                        background: isVisible ? '#f8f9fa' : 'transparent',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '4px'
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isVisible}
+                        onChange={() => toggleColumnVisibility(col.id)}
+                        style={{ cursor: 'pointer' }}
+                      />
+                      <span style={{ flex: 1, fontSize: '0.85rem' }}>{col.label}</span>
+                      {isVisible && (
+                        <div style={{ display: 'flex', gap: '0.25rem' }}>
+                          <Button
+                            onClick={() => moveColumn(col.id, 'up')}
+                            disabled={currentOrder === 0}
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          >
+                            ↑
+                          </Button>
+                          <Button
+                            onClick={() => moveColumn(col.id, 'down')}
+                            disabled={currentOrder >= visibleCount - 1}
+                            style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
+                          >
+                            ↓
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #e0e0e0' }}>
+                <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>
+                  Visible columns: {visibleColumns.length} of {AVAILABLE_COLUMNS.length}
+                </div>
+                <Button $variant="primary" onClick={() => setShowColumnConfig(false)}>
+                  Done
+                </Button>
               </div>
             </ModalBody>
           </ModalCard>

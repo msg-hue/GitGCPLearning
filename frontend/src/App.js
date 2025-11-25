@@ -24,13 +24,14 @@ function App() {
       <GlobalStyles />
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <Routes>
-          {/* Public routes */}
+          {/* Public routes - Login only, redirect if already authenticated */}
           <Route path="/login" element={<Login />} />
-          <Route path="/" element={<Layout />}>
-            {/* Default start at login */}
-            <Route index element={<Navigate to="/login" replace />} />
-            {/* Protected application routes */}
-            <Route element={<RequireAuth />}>
+          
+          {/* Protected routes - All require authentication */}
+          <Route path="/" element={<RequireAuth />}>
+            <Route element={<Layout />}>
+              {/* Default redirect to dashboard */}
+              <Route index element={<Navigate to="/dashboard" replace />} />
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="customers" element={<Navigate to="/customers/all-customers" replace />} />
               <Route path="projects" element={<Projects />} />
@@ -47,6 +48,9 @@ function App() {
               <Route path="payments/customer/:customerId" element={<CustomerPayments />} />
             </Route>
           </Route>
+          
+          {/* Catch all - redirect to login */}
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </ThemeProvider>

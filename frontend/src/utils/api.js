@@ -33,14 +33,55 @@ export async function fetchJson(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const resp = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers,
-  });
+  let resp;
+  try {
+    resp = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      headers,
+      mode: 'cors', // Explicitly request CORS
+    });
+  } catch (networkError) {
+    // Network error (CORS, connection refused, etc.)
+    console.error('[API] Network error:', networkError);
+    const errorMsg = networkError.message || String(networkError);
+    if (errorMsg.includes('CORS') || errorMsg.includes('cors') || errorMsg.includes('Failed to fetch')) {
+      throw new Error(`CORS error: The backend at ${baseUrl} is blocking requests from ${window.location.origin}. Please ensure CORS is configured to allow ${window.location.origin}`);
+    }
+    throw new Error(`Cannot connect to server at ${baseUrl}. Error: ${errorMsg}`);
+  }
+
+  // Check for CORS/network failure (status 0 or no response)
+  if (!resp || resp.status === 0) {
+    console.error('[API] Response status is 0 - likely CORS or network issue');
+    throw new Error(`CORS or network error: Cannot reach ${baseUrl}. The server may be blocking requests from ${window.location.origin}. Please check CORS configuration on the backend.`);
+  }
 
   const contentType = resp.headers.get('content-type') || '';
   const isJson = contentType.includes('application/json');
-  const data = isJson ? await resp.json() : await resp.text();
+  let data;
+  try {
+    data = isJson ? await resp.json() : await resp.text();
+  } catch (parseError) {
+    console.error('[API] Failed to parse response:', parseError);
+    data = resp.statusText || 'Unknown error';
+  }
+
+  // Handle authentication errors (401 Unauthorized)
+  if (resp.status === 401) {
+    // For login endpoint, return the actual error message from backend
+    if (isJson && data && data.message) {
+      throw new Error(data.message); // e.g., "Invalid email or password"
+    }
+    // For other endpoints, clear token and redirect
+    localStorage.removeItem('jwt');
+    localStorage.removeItem('jwt_expires');
+    localStorage.removeItem('user');
+    // Redirect to login page (only if not already on login page)
+    if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
+      window.location.href = '/login';
+    }
+    throw new Error('Authentication required. Please login again.');
+  }
 
   if (!resp.ok) {
     let message;
@@ -55,9 +96,21 @@ export async function fetchJson(path, options = {}) {
         : JSON.stringify(data, null, 2);
       console.error('[API] Error response:', data);
     } else {
-      message = data;
+      message = data || `HTTP ${resp.status} ${resp.statusText}`;
     }
-    throw new Error(`API error ${resp.status}: ${message}`);
+    
+    // Provide more helpful error messages
+    if (resp.status === 404) {
+      message = `API endpoint not found: ${baseUrl}${path}. Please check if the backend is running and the endpoint exists.`;
+    } else if (resp.status === 401) {
+      message = message || 'Invalid email or password';
+    } else if (resp.status === 403) {
+      message = message || 'Access forbidden. Please check CORS configuration.';
+    } else if (resp.status >= 500) {
+      message = message || `Server error (${resp.status}). Please check if the backend is running properly.`;
+    }
+    
+    throw new Error(message || `API error ${resp.status}: ${resp.statusText}`);
   }
 
   return data;
@@ -177,10 +230,34 @@ export async function login(email, password) {
     throw new Error('Login succeeded but no token returned');
   }
 
+  // Convert expiresAt to timestamp if it's a Date string
+  let expiresAtTimestamp;
+  if (expiresAt) {
+    if (typeof expiresAt === 'string') {
+      // Try to parse as Date and convert to timestamp
+      const date = new Date(expiresAt);
+      expiresAtTimestamp = isNaN(date.getTime()) ? expiresAt : date.getTime().toString();
+    } else if (typeof expiresAt === 'number') {
+      expiresAtTimestamp = expiresAt.toString();
+    } else {
+      expiresAtTimestamp = String(expiresAt);
+    }
+  } else {
+    // Default to 24 hours from now if not provided
+    expiresAtTimestamp = (Date.now() + 24 * 60 * 60 * 1000).toString();
+  }
+
   localStorage.setItem('jwt', token);
-  localStorage.setItem('jwt_expires', typeof expiresAt === 'string' ? expiresAt : String(expiresAt ?? ''));
+  localStorage.setItem('jwt_expires', expiresAtTimestamp);
   localStorage.setItem('user', JSON.stringify(user));
-  return { token, expiresAt, user };
+  
+  console.log('[API] Auth data saved:', {
+    hasToken: !!token,
+    expiresAt: expiresAtTimestamp,
+    expiresAtDate: new Date(parseInt(expiresAtTimestamp)).toISOString()
+  });
+  
+  return { token, expiresAt: expiresAtTimestamp, user };
 }
 
 /**

@@ -295,7 +295,6 @@ export default function CustomersPage() {
     <PageContainer>
       <Header>
         <HeaderLeft>
-          <Title>Customers</Title>
           <Actions>
             {/* Status filter dropdown */}
             <Select

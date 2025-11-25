@@ -15,7 +15,7 @@ const TitleRow = styled.div`
 const Title = styled.h1`
   margin: 0 0 0.5rem;
   color: ${p => p.theme.colors.secondary};
-  font-size: 1.2rem;
+  font-size: 0.9rem;
 `;
 const Actions = styled.div`
   display: flex;
@@ -44,11 +44,13 @@ const Th = styled.th`
   background: rgba(0,35,76,0.06);
   color: ${p => p.theme.colors.secondary};
   font-weight: 600;
+  font-size: 0.8rem;
 `;
 const Td = styled.td`
   padding: 0.6rem 0.75rem;
   border-top: 1px solid #eee;
   color: ${p => p.theme.colors.secondary};
+  font-size: 0.8rem;
 `;
 const Toolbar = styled.div`
   display: grid;
@@ -234,7 +236,6 @@ export default function PaymentPlans() {
   return (
     <Wrap>
       <TitleRow>
-        <Title>Schedule: Payment Plans</Title>
         <Actions>
           <Button onClick={openCreate}>Create Plan</Button>
           <Button onClick={fetchPlans} disabled={loading}>Refresh</Button>

@@ -14,7 +14,7 @@ const TitleRow = styled.div`
 const Title = styled.h1`
   margin: 0 0 0.5rem;
   color: ${p => p.theme.colors.secondary};
-  font-size: 1.2rem;
+  font-size: 0.9rem;
 `;
 const Actions = styled.div`
   display: flex;
@@ -43,11 +43,13 @@ const Th = styled.th`
   background: rgba(0,35,76,0.06);
   color: ${p => p.theme.colors.secondary};
   font-weight: 600;
+  font-size: 0.8rem;
 `;
 const Td = styled.td`
   padding: 0.6rem 0.75rem;
   border-top: 1px solid #eee;
   color: ${p => p.theme.colors.secondary};
+  font-size: 0.8rem;
 `;
 const ModalOverlay = styled.div`
   position: fixed;
@@ -79,7 +81,7 @@ const ModalRow = styled.div`
 `;
 const Label = styled.label`
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: ${p => p.theme.colors.secondary};
   margin-bottom: 0.25rem;
 `;
@@ -519,7 +521,6 @@ export default function PaymentSchedules({ defaultPlanId = '' }) {
   return (
     <Wrap>
       <TitleRow>
-        <Title>Schedule: Payment Schedules</Title>
         <Actions>
           <Button onClick={viewMode === 'grouped' ? fetchRowsAll : fetchRows} disabled={loading}>Refresh</Button>
           <Button onClick={openAdd} disabled={loading}>Add</Button>

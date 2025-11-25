@@ -391,7 +391,6 @@ export default function Collections() {
   return (
     <Wrap>
       <TitleRow>
-        <Title>Payments: Collections</Title>
         <Actions>
           <Button onClick={openAdd} disabled={!selectedCustomerId}>Add Payment</Button>
           <Button onClick={() => fetchPayments()} disabled={!selectedCustomerId || loadingPayments}>Refresh</Button>

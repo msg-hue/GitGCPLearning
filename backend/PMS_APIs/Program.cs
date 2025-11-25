@@ -116,6 +116,7 @@ builder.Services.AddCors(options =>
             .WithOrigins(
                 "http://34.31.174.65",           // Production frontend
                 "https://34.31.174.65",         // Production frontend (HTTPS)
+                "http://34.31.174.65:3000",      // Production frontend on port 3000
                 "http://localhost:3001",         // Local development
                 "http://localhost:3000",         // Alternative local port
                 "http://127.0.0.1:3001",         // Localhost IP
@@ -134,6 +135,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+// IMPORTANT: CORS must be enabled early in the pipeline, before other middleware
+app.UseCors("ReactApp");
+
 // Custom exception handler for API routes to return JSON instead of HTML
 app.Use(async (context, next) =>
 {

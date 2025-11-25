@@ -32,7 +32,7 @@ const HeaderRight = styled.div`
 const Title = styled.h2`
   margin: 0;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: ${p => p.theme.colors.secondary};
 `;
 
@@ -74,7 +74,7 @@ const Th = styled.th`
   background: ${props => props.theme.colors.lightGray};
   color: ${props => props.theme.colors.secondary};
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 `;
 
 const Td = styled.td`
@@ -89,7 +89,7 @@ const StatusBadge = styled.span`
   display: inline-block;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: white;
   background: ${props => {
     const s = String(props.status || '').toLowerCase();
@@ -174,7 +174,7 @@ const FormGrid = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: ${p => p.theme.colors.secondary};
 `;
 
@@ -357,7 +357,6 @@ export default function PropertiesGrid({ title = 'Properties', defaultFilter = '
     <PageContainer>
       <Header>
         <HeaderLeft>
-          <Title>{title}</Title>
           <Actions>
             <Button onClick={() => navigate('/property/all-properties')}>All</Button>
             <Select
@@ -446,11 +445,8 @@ export default function PropertiesGrid({ title = 'Properties', defaultFilter = '
 
       {!loading && !error && (
         <Footer>
-          <div>
-            Showing {filtered.length} of {totalCount} properties
-          </div>
+          <div></div>
           <Pager>
-            <span>Rows per page:</span>
             <Select
               value={pageSize}
               onChange={(e) => {

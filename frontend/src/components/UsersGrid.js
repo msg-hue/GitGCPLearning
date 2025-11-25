@@ -31,7 +31,7 @@ const HeaderRight = styled.div`
 const Title = styled.h2`
   margin: 0;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: ${p => p.theme.colors.secondary};
 `;
 
@@ -65,7 +65,7 @@ const Th = styled.th`
   background: ${props => props.theme.colors.lightGray};
   color: ${props => props.theme.colors.secondary};
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 `;
 
 const Td = styled.td`
@@ -74,13 +74,14 @@ const Td = styled.td`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.8rem;
 `;
 
 const StatusBadge = styled.span`
   display: inline-block;
   padding: 0.25rem 0.5rem;
   border-radius: 12px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: white;
   background: ${props => props.status === 'Active' || props.status === true ? props.theme.colors.primary : '#d9534f'};
 `;
@@ -543,7 +544,6 @@ export default function UsersGrid({ title = 'Users', defaultFilter = 'All' }) {
     <PageContainer>
       <Header>
         <HeaderLeft>
-          <Title>{title}</Title>
           <Actions>
             <Input
               type="text"
@@ -674,11 +674,8 @@ export default function UsersGrid({ title = 'Users', defaultFilter = 'All' }) {
 
       {!loading && !error && (
         <Footer>
-          <div>
-            Showing {filtered.length} of {totalCount} users
-          </div>
+          <div></div>
           <Pager>
-            <span>Rows per page:</span>
             <Select
               value={pageSize}
               onChange={(e) => {

@@ -31,7 +31,7 @@ const HeaderRight = styled.div`
 const Title = styled.h2`
   margin: 0;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 0.9rem;
   color: ${p => p.theme.colors.secondary};
 `;
 
@@ -78,7 +78,7 @@ const Th = styled.th`
   background: ${props => props.theme.colors.lightGray};
   color: ${props => props.theme.colors.secondary};
   font-weight: 600;
-  font-size: 0.95rem;
+  font-size: 0.8rem;
 `;
 
 const Td = styled.td`
@@ -87,6 +87,7 @@ const Td = styled.td`
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.8rem;
 `;
 
 const Footer = styled.div`
@@ -167,7 +168,7 @@ const FormGrid = styled.div`
 `;
 
 const Label = styled.label`
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   color: ${p => p.theme.colors.secondary};
 `;
 
@@ -332,7 +333,6 @@ export default function ProjectsGrid({ title = 'Projects' }) {
     <PageContainer>
       <Header>
         <HeaderLeft>
-          <Title>{title}</Title>
           <Actions>
             <Select
               value={typeFilter}
@@ -408,11 +408,8 @@ export default function ProjectsGrid({ title = 'Projects' }) {
 
       {!loading && !error && (
         <Footer>
-          <div>
-            Showing {projects.length} of {totalCount} projects
-          </div>
+          <div></div>
           <Pager>
-            <span>Rows per page:</span>
             <Select
               value={pageSize}
               onChange={(e) => {
