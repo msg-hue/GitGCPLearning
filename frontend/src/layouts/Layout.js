@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { FiChevronRight } from 'react-icons/fi';
 
 // Two-column grid layout:
@@ -59,6 +59,7 @@ const CollapsedHandle = styled.button`
  */
 const Layout = () => {
   const [isSidebarHidden, setIsSidebarHidden] = useState(false);
+  const location = useLocation();
 
   const handleToggleLinksBar = () => {
     setIsSidebarHidden(prev => !prev);
@@ -73,7 +74,7 @@ const Layout = () => {
         <TopBar />
       </TopBarArea>
       <ContentArea>
-        <Outlet />
+        <Outlet key={location.pathname} />
       </ContentArea>
     </Shell>
   );

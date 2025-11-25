@@ -262,7 +262,6 @@ const Sidebar = ({ isCollapsed = false, onToggleLinksBar }) => {
       slug: 'customers',
       icon: FiUsers,
       sublinks: [
-        { label: 'Customers Summary', path: 'summary' },
         { label: 'All Customers', path: 'all-customers' },
         { label: 'Active Customers', path: 'active-customers' },
         { label: 'Blocked Customers', path: 'blocked-customers' },

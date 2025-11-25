@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import styled from 'styled-components';
-import { useParams } from 'react-router-dom';
+import { useParams, useLocation } from 'react-router-dom';
 
 // Error boundary for lazy-loaded components
 class ErrorBoundary extends React.Component {
@@ -76,6 +76,14 @@ const Badge = styled.span`
  */
 export default function ModuleRouter() {
   const { module, view } = useParams();
+  const location = useLocation();
+  
+  // Force re-render when location changes by using location.pathname as dependency
+  // This ensures components update when navigating between routes
+  useEffect(() => {
+    // Scroll to top on route change for better UX
+    window.scrollTo(0, 0);
+  }, [location.pathname, module, view]);
 
   // Map of module/view to components. Extend as new pages are added.
   const routes = {
@@ -156,13 +164,17 @@ export default function ModuleRouter() {
   // Handle both undefined view and empty string view
   const viewKey = view || '';
   const Mod = routes[module]?.[viewKey];
+  // Use location.pathname as key to force remount on route change
+  const routeKey = `${module}-${viewKey}-${location.pathname}`;
+  
   if (Mod) {
     return (
       <React.Suspense 
+        key={routeKey}
         fallback={<Container><Title>Loading…</Title></Container>}
       >
         <ErrorBoundary>
-          <Mod />
+          <Mod key={routeKey} />
         </ErrorBoundary>
       </React.Suspense>
     );
