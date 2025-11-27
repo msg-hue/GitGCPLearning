@@ -1,0 +1,390 @@
+﻿Neon Database Schema - Property Management System
+
+DATABASE CONNECTION DETAILS:
+Server/Host: ep-square-grass-a4rx8w2f-pooler.us-east-1.aws.neon.tech
+Port: 5432
+Database: neondb
+Username: neondb_owner
+Password: npg_sUvuZSVno8p0
+SSL Mode: Require
+Connection String: Host=ep-square-grass-a4rx8w2f-pooler.us-east-1.aws.neon.tech;Port=5432;Database=neondb;Username=neondb_owner;Password=npg_sUvuZSVno8p0;SSL Mode=Require;Trust Server Certificate=true
+
+TABLES AND COLUMNS:
+
+users
+userid VARCHAR(10) PRIMARY KEY
+fullname VARCHAR(150) NOT NULL
+email VARCHAR(150) NOT NULL
+passwordhash VARCHAR(256) NOT NULL
+roleid VARCHAR(10)
+isactive BOOLEAN DEFAULT true
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+FOREIGN KEY roleid REFERENCES roles(roleid) ON DELETE SET NULL
+
+roles
+roleid VARCHAR(10) PRIMARY KEY
+rolename VARCHAR(100) NOT NULL
+description TEXT
+isactive BOOLEAN DEFAULT true
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+customers
+customerid VARCHAR(10) PRIMARY KEY
+regid VARCHAR(10)
+planid VARCHAR(10)
+fullname VARCHAR(150)
+fathername VARCHAR(150)
+cnic VARCHAR(50)
+passportno VARCHAR(50)
+dob DATE
+gender VARCHAR(20)
+phone VARCHAR(50)
+email VARCHAR(150)
+mailingaddress VARCHAR(255)
+permanentaddress VARCHAR(255)
+city VARCHAR(100)
+country VARCHAR(100)
+subproject VARCHAR(100)
+registeredsize VARCHAR(50)
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+status VARCHAR(50) DEFAULT 'Active'
+nomineename VARCHAR(100)
+nomineeid VARCHAR(50)
+nomineerelation VARCHAR(50)
+additionalinfo TEXT
+allotmentstatus VARCHAR(50)
+FOREIGN KEY regid REFERENCES registration(reg_id) ON DELETE SET NULL
+FOREIGN KEY planid REFERENCES paymentplan(planid) ON DELETE SET NULL
+INDEX ON cnic
+INDEX ON email
+
+property
+propertyid VARCHAR(10) PRIMARY KEY
+projectid VARCHAR(10)
+plotno VARCHAR(50)
+street VARCHAR(50)
+plottype VARCHAR(50)
+block VARCHAR(50)
+propertytype VARCHAR(50)
+size VARCHAR(50)
+status VARCHAR(50) DEFAULT 'Available'
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+additionalinfo TEXT
+INDEX ON (projectid, block, plotno)
+
+projects
+projectid VARCHAR(10) PRIMARY KEY
+projectname VARCHAR(150)
+type VARCHAR(50)
+location VARCHAR(255)
+description TEXT
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+allotment
+allotmentid VARCHAR(10) PRIMARY KEY
+customerid VARCHAR(10)
+propertyid VARCHAR(10)
+allotmentdate TIMESTAMP
+allotment_letter_no VARCHAR(50)
+status VARCHAR(50) DEFAULT 'Active'
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+remarks TEXT
+possession_date DATE
+completion_date DATE
+balloting_date DATE
+ballot_no VARCHAR(50)
+FOREIGN KEY customerid REFERENCES customers(customerid) ON DELETE SET NULL
+FOREIGN KEY propertyid REFERENCES property(propertyid) ON DELETE SET NULL
+
+payments
+paymentid VARCHAR(10) PRIMARY KEY
+scheduleid VARCHAR(10)
+customerid VARCHAR(10)
+paymentdate TIMESTAMP
+amount NUMERIC(18,2)
+method VARCHAR(50)
+referenceno VARCHAR(100)
+status VARCHAR(250) DEFAULT 'Pending'
+remarks VARCHAR(255)
+FOREIGN KEY customerid REFERENCES customers(customerid) ON DELETE SET NULL
+INDEX ON paymentdate
+INDEX ON referenceno
+
+paymentplan
+planid VARCHAR(10) PRIMARY KEY
+projectid VARCHAR(10)
+planname VARCHAR(150)
+totalamount NUMERIC(18,2)
+durationmonths INTEGER
+frequency VARCHAR(50)
+description TEXT
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+paymentschedule
+scheduleid VARCHAR(12) PRIMARY KEY
+planid VARCHAR(10)
+paymentdescription TEXT
+installmentno INTEGER
+duedate TIMESTAMP
+amount NUMERIC(18,2)
+surchargeapplied BOOLEAN
+surchargerate NUMERIC(5,2)
+description TEXT
+FOREIGN KEY planid REFERENCES paymentplan(planid) ON DELETE SET NULL
+INDEX ON (planid, duedate)
+
+registration
+reg_id VARCHAR(10) PRIMARY KEY
+reg_date DATE
+projectname VARCHAR(100)
+sub_project VARCHAR(100)
+size VARCHAR(50)
+category VARCHAR(50)
+booking_amount NUMERIC(15,2)
+total_price NUMERIC(15,2)
+payment_plan VARCHAR(50)
+status VARCHAR(50) DEFAULT 'Active'
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+remarks TEXT
+priority INTEGER
+source VARCHAR(100)
+agent_name VARCHAR(100)
+agent_commission NUMERIC(10,2)
+
+transfer
+transferid VARCHAR(10) PRIMARY KEY
+fromcustomerid VARCHAR(10)
+tocustomerid VARCHAR(10)
+propertyid VARCHAR(10)
+transfer_date DATE
+transfer_fee NUMERIC(15,2)
+status VARCHAR(50) DEFAULT 'Pending'
+approved_by VARCHAR(100)
+approval_date DATE
+reason TEXT
+documents TEXT
+createdat TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+completion_date DATE
+FOREIGN KEY fromcustomerid REFERENCES customers(customerid) ON DELETE RESTRICT
+FOREIGN KEY tocustomerid REFERENCES customers(customerid) ON DELETE RESTRICT
+FOREIGN KEY propertyid REFERENCES property(propertyid) ON DELETE SET NULL
+
+possession
+possessionid VARCHAR(10) PRIMARY KEY
+customerid VARCHAR(10)
+propertyid VARCHAR(10)
+possessiondate TIMESTAMP
+possession_letter_no VARCHAR(50)
+status VARCHAR(50) DEFAULT 'Pending'
+handover_date DATE
+handover_by VARCHAR(100)
+received_by VARCHAR(100)
+conditions TEXT
+documents TEXT
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+remarks TEXT
+FOREIGN KEY customerid REFERENCES customers(customerid) ON DELETE SET NULL
+FOREIGN KEY propertyid REFERENCES property(propertyid) ON DELETE SET NULL
+
+customer_logs
+log_id VARCHAR(10) PRIMARY KEY
+customer_id VARCHAR(10)
+action VARCHAR(100)
+old_values TEXT
+new_values TEXT
+changed_by VARCHAR(100)
+changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+remarks TEXT
+FOREIGN KEY customer_id REFERENCES customers(customerid) ON DELETE SET NULL
+
+penalties
+penalty_id VARCHAR(10) PRIMARY KEY
+customer_id VARCHAR(10)
+penalty_type VARCHAR(100)
+amount NUMERIC(15,2)
+penalty_date DATE
+due_date DATE
+status VARCHAR(50) DEFAULT 'Pending'
+reason TEXT
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+paid_date DATE
+waived_date DATE
+waived_by VARCHAR(100)
+FOREIGN KEY customer_id REFERENCES customers(customerid) ON DELETE SET NULL
+
+waivers
+waiver_id VARCHAR(10) PRIMARY KEY
+customer_id VARCHAR(10)
+waiver_type VARCHAR(100)
+amount NUMERIC(15,2)
+waiver_date DATE
+reason TEXT
+approved_by VARCHAR(100)
+approval_date DATE
+status VARCHAR(50) DEFAULT 'Pending'
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+reference_no VARCHAR(100)
+FOREIGN KEY customer_id REFERENCES customers(customerid) ON DELETE SET NULL
+
+refunds
+refund_id VARCHAR(10) PRIMARY KEY
+customer_id VARCHAR(10)
+refund_amount NUMERIC(15,2)
+refund_date DATE
+reason TEXT
+status VARCHAR(50) DEFAULT 'Pending'
+approved_by VARCHAR(100)
+approval_date DATE
+processed_by VARCHAR(100)
+processed_date DATE
+payment_method VARCHAR(50)
+reference_no VARCHAR(100)
+bank_details TEXT
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+created_by VARCHAR(100)
+FOREIGN KEY customer_id REFERENCES customers(customerid) ON DELETE SET NULL
+
+ndcs
+ndc_id VARCHAR(10) PRIMARY KEY
+customer_id VARCHAR(10)
+ndc_no VARCHAR(50)
+issue_date DATE
+status VARCHAR(50) DEFAULT 'Active'
+issued_by VARCHAR(100)
+remarks TEXT
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+expiry_date DATE
+conditions TEXT
+verified_by VARCHAR(100)
+verification_date DATE
+FOREIGN KEY customer_id REFERENCES customers(customerid) ON DELETE SET NULL
+
+CONSTRAINTS:
+
+PRIMARY KEY CONSTRAINTS:
+PK_users: users.userid
+PK_roles: roles.roleid
+PK_customers: customers.customerid
+PK_property: property.propertyid
+PK_projects: projects.projectid
+PK_allotment: allotment.allotmentid
+PK_payments: payments.paymentid
+PK_paymentplan: paymentplan.planid
+PK_paymentschedule: paymentschedule.scheduleid
+PK_registration: registration.reg_id
+PK_transfer: transfer.transferid
+PK_possession: possession.possessionid
+PK_customer_logs: customer_logs.log_id
+PK_penalties: penalties.penalty_id
+PK_waivers: waivers.waiver_id
+PK_refunds: refunds.refund_id
+PK_ndcs: ndcs.ndc_id
+
+FOREIGN KEY CONSTRAINTS:
+FK_users_roleid: users.roleid -> roles.roleid ON DELETE SET NULL
+FK_customers_regid: customers.regid -> registration.reg_id ON DELETE SET NULL
+FK_customers_planid: customers.planid -> paymentplan.planid ON DELETE SET NULL
+FK_allotment_customerid: allotment.customerid -> customers.customerid ON DELETE SET NULL
+FK_allotment_propertyid: allotment.propertyid -> property.propertyid ON DELETE SET NULL
+FK_payments_customerid: payments.customerid -> customers.customerid ON DELETE SET NULL
+FK_paymentschedule_planid: paymentschedule.planid -> paymentplan.planid ON DELETE SET NULL
+FK_transfer_fromcustomerid: transfer.fromcustomerid -> customers.customerid ON DELETE RESTRICT
+FK_transfer_tocustomerid: transfer.tocustomerid -> customers.customerid ON DELETE RESTRICT
+FK_transfer_propertyid: transfer.propertyid -> property.propertyid ON DELETE SET NULL
+FK_possession_customerid: possession.customerid -> customers.customerid ON DELETE SET NULL
+FK_possession_propertyid: possession.propertyid -> property.propertyid ON DELETE SET NULL
+FK_customer_logs_customer_id: customer_logs.customer_id -> customers.customerid ON DELETE SET NULL
+FK_penalties_customer_id: penalties.customer_id -> customers.customerid ON DELETE SET NULL
+FK_waivers_customer_id: waivers.customer_id -> customers.customerid ON DELETE SET NULL
+FK_refunds_customer_id: refunds.customer_id -> customers.customerid ON DELETE SET NULL
+FK_ndcs_customer_id: ndcs.customer_id -> customers.customerid ON DELETE SET NULL
+
+INDEXES:
+IDX_customers_cnic: customers.cnic
+IDX_customers_email: customers.email
+IDX_property_project_block_plot: property(projectid, block, plotno)
+IDX_payments_paymentdate: payments.paymentdate
+IDX_payments_referenceno: payments.referenceno
+IDX_paymentschedule_plan_duedate: paymentschedule(planid, duedate)
+
+NOT NULL CONSTRAINTS:
+users.userid NOT NULL
+users.fullname NOT NULL
+users.email NOT NULL
+users.passwordhash NOT NULL
+roles.roleid NOT NULL
+roles.rolename NOT NULL
+customers.customerid NOT NULL
+customers.createdat NOT NULL
+property.propertyid NOT NULL
+property.status NOT NULL
+property.createdat NOT NULL
+projects.projectid NOT NULL
+projects.createdat NOT NULL
+allotment.allotmentid NOT NULL
+allotment.status NOT NULL
+allotment.created_at NOT NULL
+payments.paymentid NOT NULL
+payments.status NOT NULL
+paymentplan.planid NOT NULL
+paymentplan.createdat NOT NULL
+paymentschedule.scheduleid NOT NULL
+registration.reg_id NOT NULL
+registration.status NOT NULL
+registration.created_at NOT NULL
+transfer.transferid NOT NULL
+transfer.status NOT NULL
+transfer.createdat NOT NULL
+possession.possessionid NOT NULL
+possession.status NOT NULL
+possession.created_at NOT NULL
+customer_logs.log_id NOT NULL
+customer_logs.changed_at NOT NULL
+penalties.penalty_id NOT NULL
+penalties.status NOT NULL
+penalties.created_at NOT NULL
+waivers.waiver_id NOT NULL
+waivers.status NOT NULL
+waivers.created_at NOT NULL
+refunds.refund_id NOT NULL
+refunds.status NOT NULL
+refunds.created_at NOT NULL
+ndcs.ndc_id NOT NULL
+ndcs.status NOT NULL
+ndcs.created_at NOT NULL
+
+DEFAULT VALUES:
+users.isactive DEFAULT true
+users.createdat DEFAULT CURRENT_TIMESTAMP
+roles.isactive DEFAULT true
+roles.createdat DEFAULT CURRENT_TIMESTAMP
+customers.createdat DEFAULT CURRENT_TIMESTAMP
+customers.status DEFAULT 'Active'
+property.status DEFAULT 'Available'
+property.createdat DEFAULT CURRENT_TIMESTAMP
+projects.createdat DEFAULT CURRENT_TIMESTAMP
+allotment.status DEFAULT 'Active'
+allotment.created_at DEFAULT CURRENT_TIMESTAMP
+payments.status DEFAULT 'Pending'
+paymentplan.createdat DEFAULT CURRENT_TIMESTAMP
+registration.status DEFAULT 'Active'
+registration.created_at DEFAULT CURRENT_TIMESTAMP
+transfer.status DEFAULT 'Pending'
+transfer.createdat DEFAULT CURRENT_TIMESTAMP
+possession.status DEFAULT 'Pending'
+possession.created_at DEFAULT CURRENT_TIMESTAMP
+customer_logs.changed_at DEFAULT CURRENT_TIMESTAMP
+penalties.status DEFAULT 'Pending'
+penalties.created_at DEFAULT CURRENT_TIMESTAMP
+waivers.status DEFAULT 'Pending'
+waivers.created_at DEFAULT CURRENT_TIMESTAMP
+refunds.status DEFAULT 'Pending'
+refunds.created_at DEFAULT CURRENT_TIMESTAMP
+ndcs.status DEFAULT 'Active'
+ndcs.created_at DEFAULT CURRENT_TIMESTAMP

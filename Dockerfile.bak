@@ -1,0 +1,17 @@
+# Use the official .NET SDK image for building
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+WORKDIR /src
+
+# Copy project file and restore dependencies
+COPY ["PMS_APIs.csproj", "./"]
+RUN dotnet restore "PMS_APIs.csproj"
+
+# Copy all source and build
+COPY . .
+RUN dotnet publish "PMS_APIs.csproj" -c Release -o /app/publish /p:UseAppHost=false
+
+# Final runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "PMS_APIs.dll"]

@@ -1,0 +1,46 @@
+name: 🚀 Deploy PMS Staging (Hostinger)
+
+on:
+  push:
+    branches: [ feature/pr-template ]
+  workflow_dispatch:
+
+jobs:
+  ftp-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      # 👇 All npm commands will now run inside the frontend directory
+      - name: Install dependencies
+        run: |
+          cd frontend
+          npm install
+
+      - name: Build React app
+        run: |
+          cd frontend
+          npm run build
+
+      - name: 🚀 FTP Deploy to staging
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.4
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          protocol: ftps
+          port: 21
+          # 👇 Points to the frontend build output
+          local-dir: frontend/build/
+          server-dir: stagingpms/
+          log-level: verbose
+          exclude: |
+            **/.git*
+            **/.github/**
+            **/node_modules/**

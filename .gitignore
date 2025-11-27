@@ -1,121 +1,63 @@
-<<<<<<< HEAD
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Windows device names
+nul
+CON
+PRN
+AUX
+CLOCK$
+COM1
+COM2
+COM3
+COM4
+COM5
+COM6
+COM7
+COM8
+COM9
+LPT1
+LPT2
+LPT3
+LPT4
+LPT5
+LPT6
+LPT7
+LPT8
+LPT9
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-
-# testing
-/coverage
-
-# production
-/build
-
-# misc
-.DS_Store
-=======
-# ────────────────
-# React Project .gitignore
-# ────────────────
-
-# Dependencies
+# Node / React
 node_modules/
-.pnpm-store/
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
-# Build output
-/build
-/dist
-/out
-/.next
-/.nuxt
-/.vercel
-/.netlify
-
-# Environment files
+build/
+dist/
 .env
-.env.*.local
->>>>>>> 78f7ae05603ce8b870f5c4d14ccc6fbdf5f7ac4f
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-<<<<<<< HEAD
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-.vs/
+# .NET Core / ASP.NET
 bin/
 obj/
-*.user
-*.suo
-*.vsidx
-*.vscode/
-
-=======
-# Logs
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-logs/
+publish/
+*.dll
+*.exe
+*.pdb
+*.cache
 *.log
-
-# IDE / Editor
-.vscode/
-.idea/
+*.vs/
+*.user
+*.userosscache
 *.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-*.DS_Store
-Thumbs.db
-
-# Coverage & test output
-/coverage
-/.nyc_output
-/jest-html-reporters-*.html
-/test-report.xml
-
-# OS generated files
-.DS_Store
-ehthumbs.db
-Icon?
-Desktop.ini
-
-# Temporary files
 *.tmp
-*.temp
+*.dbmdl
 *.bak
-*.orig
 
-# Misc
-.cache/
-.parcel-cache/
-storybook-static/
-styleguide/
-*.lock-wscript
+# VS Code
+.vscode/
 
-# TypeScript build artifacts
-*.tsbuildinfo
+# Claude / other local config files
+.claude/
+*.local.json
 
-# Local SSL certificates (if any)
-cert.pem
-key.pem
-
-# Optional: Ignore env-based config overrides
-config/local.js
-config/local.json
-
-# Optional: Ignore analytics or API keys
-apikeys.json
-firebase-config.json
-
-# End of .gitignore
->>>>>>> 78f7ae05603ce8b870f5c4d14ccc6fbdf5f7ac4f
+# Other generated files
+*.zip
+*.7z
+*.tar
+*.gz
