@@ -20,6 +20,8 @@ builder.Services.AddControllers()
         // Allow reading comments and trailing commas
         options.JsonSerializerOptions.ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip;
         options.JsonSerializerOptions.AllowTrailingCommas = true;
+        // Handle circular references (e.g., Customer -> Allotments -> Customer)
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
     });
 
 // Add Swagger/OpenAPI support
@@ -111,17 +113,19 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("ReactApp", policy =>
     {
-        // Allow specific origins: frontend on same domain and localhost for development
+        // Allow localhost origins dynamically for development
         policy
-            .WithOrigins(
-                "http://34.31.174.65",           // Production frontend
-                "https://34.31.174.65",         // Production frontend (HTTPS)
-                "http://34.31.174.65:3000",      // Production frontend on port 3000
-                "http://localhost:3001",         // Local development
-                "http://localhost:3000",         // Alternative local port
-                "http://127.0.0.1:3001",         // Localhost IP
-                "http://127.0.0.1:3000"          // Localhost IP alternative
-            )
+            .SetIsOriginAllowed(origin =>
+            {
+                var uri = new Uri(origin);
+                // Allow any localhost or 127.0.0.1 origin for development
+                if (uri.Host == "localhost" || uri.Host == "127.0.0.1")
+                    return true;
+                // Allow production IPs
+                if (uri.Host == "34.31.174.65")
+                    return true;
+                return false;
+            })
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
@@ -135,8 +139,17 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// IMPORTANT: CORS must be enabled early in the pipeline, before other middleware
+// IMPORTANT: CORS must be enabled FIRST, before ANY other middleware
+// This ensures preflight OPTIONS requests get CORS headers
 app.UseCors("ReactApp");
+
+// Skip HTTPS redirection in development to avoid CORS issues with localhost
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHttpsRedirection();
+    app.UseExceptionHandler("/Home/Error");
+    app.UseHsts();
+}
 
 // Custom exception handler for API routes to return JSON instead of HTML
 app.Use(async (context, next) =>
@@ -165,16 +178,6 @@ app.Use(async (context, next) =>
     }
 });
 
-if (!app.Environment.IsDevelopment())
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
-
-// Use CORS - Must be VERY early in pipeline for preflight OPTIONS requests
-// This must come before any other middleware that might handle requests
-app.UseCors("ReactApp");
-
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -182,7 +185,6 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-app.UseHttpsRedirection();
 app.UseStaticFiles();
 
 app.UseRouting();

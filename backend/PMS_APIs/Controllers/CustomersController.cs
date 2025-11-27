@@ -715,9 +715,89 @@ namespace PMS_APIs.Controllers
         }
 
         /// <summary>
-        /// Get customer statistics (total, active, blocked)
+        /// Get customer account statement with payment schedules and payment history
         /// </summary>
-        /// <returns>Customer statistics</returns>
+        /// <param name="id">Customer ID</param>
+        /// <returns>Account statement with schedules and payments</returns>
+        [HttpGet("{id}/statement")]
+        public async Task<ActionResult> GetCustomerStatement(string id)
+        {
+            try
+            {
+                var normalizedId = id?.Trim() ?? string.Empty;
+                
+                // Get customer with plan
+                var customer = await _context.Customers
+                    .FirstOrDefaultAsync(c => c.CustomerId != null && c.CustomerId.Trim() == normalizedId);
+
+                if (customer == null)
+                {
+                    return NotFound(new { message = "Customer not found" });
+                }
+
+                var planId = customer.PlanId;
+                var statementItems = new List<object>();
+
+                // Get payment schedules for the customer's plan
+                if (!string.IsNullOrWhiteSpace(planId))
+                {
+                    var schedules = await _context.PaymentSchedules
+                        .Where(s => s.PlanId == planId)
+                        .OrderBy(s => s.DueDate)
+                        .ThenBy(s => s.InstallmentNo)
+                        .ToListAsync();
+
+                    foreach (var schedule in schedules)
+                    {
+                        statementItems.Add(new
+                        {
+                            ScheduleId = schedule.ScheduleId,
+                            ScheduledPayment = schedule.PaymentDescription ?? $"Installment #{schedule.InstallmentNo ?? 0}",
+                            DueAmount = schedule.Amount ?? 0,
+                            DueDate = schedule.DueDate,
+                            InstallmentNo = schedule.InstallmentNo,
+                            SurchargeApplied = schedule.SurchargeApplied ?? false,
+                            SurchargeRate = schedule.SurchargeRate ?? 0,
+                            Description = schedule.Description
+                        });
+                    }
+                }
+
+                // Get actual payments made by the customer
+                var payments = await _context.Payments
+                    .Where(p => p.CustomerId != null && p.CustomerId.Trim() == normalizedId)
+                    .OrderBy(p => p.PaymentDate)
+                    .ToListAsync();
+
+                return Ok(new
+                {
+                    CustomerId = customer.CustomerId,
+                    CustomerName = customer.FullName,
+                    PlanId = planId,
+                    Schedules = statementItems,
+                    Payments = payments.Select(p => new
+                    {
+                        PaymentId = p.PaymentId,
+                        PaymentDate = p.PaymentDate,
+                        Amount = p.Amount,
+                        Method = p.Method,
+                        ReferenceNo = p.ReferenceNo,
+                        Status = p.Status,
+                        Remarks = p.Remarks,
+                        ScheduleId = p.ScheduleId
+                    }).ToList()
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving customer statement", error = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Get customer statistics (total, active, blocked, allotted, unallotted)
+        /// </summary>
+        /// <returns>Customer statistics for dashboard</returns>
         [HttpGet("statistics")]
         public async Task<ActionResult> GetCustomerStatistics()
         {
@@ -729,7 +809,7 @@ namespace PMS_APIs.Controllers
                     await conn.OpenAsync();
                 }
 
-                // Detect column name variant
+                // Detect column name variants
                 var customerCols = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 using (var custColsCmd = conn.CreateCommand())
                 {
@@ -737,7 +817,7 @@ namespace PMS_APIs.Controllers
                                                  FROM information_schema.columns
                                                  WHERE table_schema = current_schema()
                                                    AND table_name = 'customers'
-                                                   AND column_name IN ('customer_id','customerid','status')";
+                                                   AND column_name IN ('customer_id','customerid','status','allotmentstatus')";
                     using var r = await custColsCmd.ExecuteReaderAsync();
                     while (await r.ReadAsync())
                     {
@@ -748,10 +828,13 @@ namespace PMS_APIs.Controllers
 
                 var colCustomerId = customerCols.Contains("customer_id") ? "customer_id" : "customerid";
                 var colStatus = "status";
+                var hasAllotmentStatus = customerCols.Contains("allotmentstatus");
 
                 int totalCustomers = 0;
                 int activeCustomers = 0;
                 int blockedCustomers = 0;
+                int allottedCustomers = 0;
+                int unallottedCustomers = 0;
 
                 // Get total count
                 using (var totalCmd = conn.CreateCommand())
@@ -774,11 +857,46 @@ namespace PMS_APIs.Controllers
                     blockedCustomers = Convert.ToInt32(await blockedCmd.ExecuteScalarAsync());
                 }
 
+                // Get allotted/unallotted counts
+                if (hasAllotmentStatus)
+                {
+                    using (var allottedCmd = conn.CreateCommand())
+                    {
+                        allottedCmd.CommandText = $"SELECT COUNT(*) FROM customers WHERE UPPER(TRIM(allotmentstatus)) = 'ALLOTTED'";
+                        allottedCustomers = Convert.ToInt32(await allottedCmd.ExecuteScalarAsync());
+                    }
+
+                    using (var unallottedCmd = conn.CreateCommand())
+                    {
+                        unallottedCmd.CommandText = $"SELECT COUNT(*) FROM customers WHERE allotmentstatus IS NULL OR UPPER(TRIM(allotmentstatus)) IN ('NOT ALLOTTED', 'UNALLOTTED', 'PENDING', '')";
+                        unallottedCustomers = Convert.ToInt32(await unallottedCmd.ExecuteScalarAsync());
+                    }
+                }
+                else
+                {
+                    // If allotmentstatus column doesn't exist, estimate based on allotment table
+                    using (var allottedCmd = conn.CreateCommand())
+                    {
+                        allottedCmd.CommandText = @"SELECT COUNT(DISTINCT customerid) FROM allotment WHERE customerid IS NOT NULL";
+                        try
+                        {
+                            allottedCustomers = Convert.ToInt32(await allottedCmd.ExecuteScalarAsync());
+                        }
+                        catch
+                        {
+                            allottedCustomers = 0;
+                        }
+                    }
+                    unallottedCustomers = totalCustomers - allottedCustomers;
+                }
+
                 return Ok(new
                 {
                     totalCustomers,
                     activeCustomers,
-                    blockedCustomers
+                    blockedCustomers,
+                    allottedCustomers,
+                    unallottedCustomers
                 });
             }
             catch (Exception ex)

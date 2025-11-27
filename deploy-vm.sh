@@ -1,23 +1,35 @@
 #!/bin/bash
+set -e
 
-CONFIG="./deploy.env.json"
+echo "========================================="
+echo " Deployment Started"
+echo "========================================="
 
-VM_IP=$(jq -r '.VM_IP' $CONFIG)
-SSH_USERNAME=$(jq -r '.SSH_USERNAME' $CONFIG)
-DEPLOY_PATH=$(jq -r '.DEPLOY_PATH' $CONFIG)
-SERVICE_FILE=$(jq -r '.SERVICE_FILE' $CONFIG)
-PROJECT_NAME=$(jq -r '.PROJECT_NAME' $CONFIG)
-PORT=$(jq -r '.PORT' $CONFIG)
+echo ">>> Switching to project directory..."
+cd ~/apps/pms
 
-echo "----- Publishing .NET project -----"
-dotnet publish -c Release -o publish
+echo ">>> Stopping containers"
+docker-compose down
 
-echo "----- Copying to VM -----"
-ssh $SSH_USERNAME@$VM_IP "sudo mkdir -p $DEPLOY_PATH"
+echo ">>> Building Docker images (backend publish happens inside Dockerfile)..."
+docker-compose build
 
-scp -r ./publish/* $SSH_USERNAME@$VM_IP:$DEPLOY_PATH/
+echo ">>> Restarting containers..."
+docker-compose up -d --remove-orphans
 
-echo "----- Restarting service -----"
-ssh $SSH_USERNAME@$VM_IP "sudo systemctl restart $SERVICE_FILE"
+echo "========================================="
+echo " Deployment Completed Successfully"
+echo "========================================="
 
-echo "----- Deployment completed successfully -----"
+
+
+
+# #!/bin/bash
+
+# echo "----- Publishing .NET project -----"
+# dotnet publish -c Release -o publish
+# echo "----- Restarting service -----"
+# echo "----- Deployment completed successfully -----"
+
+
+

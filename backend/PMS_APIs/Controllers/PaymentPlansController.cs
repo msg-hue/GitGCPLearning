@@ -211,6 +211,106 @@ namespace PMS_APIs.Controllers
             return Ok(overduePlans);
         }
 
+        /// <summary>
+        /// Get account record for a payment plan by planid
+        /// Purpose: Retrieve payment plan with all related payment schedule entries
+        /// Inputs: planid (path parameter)
+        /// Outputs: AccountRecord containing plan details, all schedule entries, and account summary
+        /// </summary>
+        [HttpGet("{planid}/account-record")]
+        public async Task<ActionResult<AccountRecord>> GetAccountRecord(string planid)
+        {
+            try
+            {
+                var normalizedPlanId = planid?.Trim() ?? string.Empty;
+                
+                // Get payment plan
+                var paymentPlan = await _context.PaymentPlans
+                    .FirstOrDefaultAsync(pp => pp.PlanId != null && pp.PlanId.Trim() == normalizedPlanId);
+
+                if (paymentPlan == null)
+                {
+                    return NotFound(new { message = "Payment plan not found" });
+                }
+
+                // Get all payment schedules for this plan
+                var schedules = await _context.PaymentSchedules
+                    .Where(s => s.PlanId != null && s.PlanId.Trim() == normalizedPlanId)
+                    .OrderBy(s => s.DueDate)
+                    .ThenBy(s => s.InstallmentNo)
+                    .ToListAsync();
+
+                // Build schedule entries
+                var scheduleEntries = schedules.Select(s => new ScheduleEntry
+                {
+                    ScheduleId = s.ScheduleId ?? string.Empty,
+                    PaymentDescription = s.PaymentDescription,
+                    InstallmentNo = s.InstallmentNo,
+                    DueDate = s.DueDate,
+                    DueAmount = s.Amount,
+                    SurchargeApplied = s.SurchargeApplied,
+                    SurchargeRate = s.SurchargeRate,
+                    Description = s.Description
+                }).ToList();
+
+                // Calculate account summary
+                var currentDate = DateTime.UtcNow;
+                var totalDueAmount = scheduleEntries
+                    .Where(s => s.DueAmount.HasValue)
+                    .Sum(s => s.DueAmount!.Value);
+
+                var totalSurchargeAmount = scheduleEntries
+                    .Where(s => s.SurchargeApplied == true && s.SurchargeRate.HasValue && s.DueAmount.HasValue)
+                    .Sum(s => s.DueAmount!.Value * s.SurchargeRate!.Value / 100);
+
+                var grandTotal = totalDueAmount + totalSurchargeAmount;
+
+                var dueDates = scheduleEntries
+                    .Where(s => s.DueDate.HasValue)
+                    .Select(s => s.DueDate!.Value)
+                    .ToList();
+
+                var pendingSchedules = scheduleEntries
+                    .Count(s => s.DueDate.HasValue && s.DueDate.Value > currentDate);
+
+                var overdueSchedules = scheduleEntries
+                    .Count(s => s.DueDate.HasValue && s.DueDate.Value < currentDate);
+
+                var summary = new AccountSummary
+                {
+                    TotalSchedules = scheduleEntries.Count,
+                    TotalDueAmount = totalDueAmount > 0 ? totalDueAmount : null,
+                    TotalSurchargeAmount = totalSurchargeAmount > 0 ? totalSurchargeAmount : null,
+                    GrandTotal = grandTotal > 0 ? grandTotal : null,
+                    FirstDueDate = dueDates.Any() ? dueDates.Min() : null,
+                    LastDueDate = dueDates.Any() ? dueDates.Max() : null,
+                    PendingSchedules = pendingSchedules,
+                    OverdueSchedules = overdueSchedules
+                };
+
+                // Build account record
+                var accountRecord = new AccountRecord
+                {
+                    PlanId = paymentPlan.PlanId,
+                    PlanName = paymentPlan.PlanName,
+                    ProjectId = paymentPlan.ProjectId,
+                    TotalAmount = paymentPlan.TotalAmount,
+                    DurationMonths = paymentPlan.DurationMonths,
+                    Frequency = paymentPlan.Frequency,
+                    Description = paymentPlan.Description,
+                    CreatedAt = paymentPlan.CreatedAt,
+                    ScheduleEntries = scheduleEntries,
+                    Summary = summary
+                };
+
+                return Ok(accountRecord);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error retrieving account record", error = ex.Message });
+            }
+        }
+
         private bool PaymentPlanExists(string id)
         {
             return _context.PaymentPlans.Any(e => e.PlanId == id);

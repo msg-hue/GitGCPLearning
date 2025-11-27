@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useNavigate } from 'react-router-dom';
 import { getCustomers, getCustomer, createCustomer, updateCustomer, deleteCustomer } from '../utils/api';
 import PaymentSchedules from '../pages/schedule/PaymentSchedules';
+import CustomerActionModal from './CustomerActionModal';
+import CustomerStatement from './CustomerStatement';
 
 const PageContainer = styled.div`
   background: white;
@@ -302,6 +304,11 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
   });
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
+  const [showActionModal, setShowActionModal] = useState(false);
+  const [actionCustomerId, setActionCustomerId] = useState(null);
+  const [actionCustomerName, setActionCustomerName] = useState(null);
+  const [showStatement, setShowStatement] = useState(false);
+  const [statementCustomerId, setStatementCustomerId] = useState(null);
 
   const routeFilter = useMemo(() => defaultFilter, [defaultFilter]);
 
@@ -477,6 +484,52 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
 
     return () => { isMounted = false; };
   }, [routeFilter, statusFilter, allotmentFilter, search, page, pageSize]);
+
+  /**
+   * handleRowClick
+   * Purpose: Handle single click on a customer row to show action modal.
+   * Inputs:
+   *  - id: string customer identifier
+   *  - customer: customer object (optional, for name)
+   * Outputs:
+   *  - Shows action modal with options
+   */
+  const handleRowClick = (id, customer = null) => {
+    const cid = String(id || '').trim();
+    if (!cid) return;
+    
+    const customerName = customer?.FullName || customer?.fullName || customer?.full_name || customer?.Name || customer?.name || null;
+    setActionCustomerId(cid);
+    setActionCustomerName(customerName);
+    setShowActionModal(true);
+  };
+
+  /**
+   * handleOpenCustomerRecord
+   * Purpose: Open customer record (same as double-click behavior).
+   * Inputs:
+   *  - id: string customer identifier
+   * Outputs:
+   *  - Loads customer details and opens detail modal
+   */
+  const handleOpenCustomerRecord = async (id) => {
+    await handleRowDoubleClick(id);
+  };
+
+  /**
+   * handleOpenStatement
+   * Purpose: Open customer statement modal.
+   * Inputs:
+   *  - id: string customer identifier
+   * Outputs:
+   *  - Shows statement modal
+   */
+  const handleOpenStatement = (id) => {
+    const cid = String(id || '').trim();
+    if (!cid) return;
+    setStatementCustomerId(cid);
+    setShowStatement(true);
+  };
 
   /**
    * handleRowDoubleClick
@@ -799,9 +852,10 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
                 <>
                   <tr
                     key={rowId}
+                    onClick={() => handleRowClick(rowId, c)}
                     onDoubleClick={() => handleRowDoubleClick(rowId)}
                     style={{ cursor: 'pointer' }}
-                    title="Double-click to open details"
+                    title="Click to select action, double-click to open details"
                   >
                     {visibleColumns.map(col => {
                       let cellValue = '';
@@ -1254,6 +1308,30 @@ export default function CustomersGrid({ title = 'Customers', defaultFilter = 'Al
             </ModalBody>
           </ModalCard>
         </ModalBackdrop>
+      )}
+
+      {showActionModal && (
+        <CustomerActionModal
+          customerId={actionCustomerId}
+          customerName={actionCustomerName}
+          onOpenRecord={handleOpenCustomerRecord}
+          onOpenStatement={handleOpenStatement}
+          onClose={() => {
+            setShowActionModal(false);
+            setActionCustomerId(null);
+            setActionCustomerName(null);
+          }}
+        />
+      )}
+
+      {showStatement && statementCustomerId && (
+        <CustomerStatement
+          customerId={statementCustomerId}
+          onClose={() => {
+            setShowStatement(false);
+            setStatementCustomerId(null);
+          }}
+        />
       )}
     </PageContainer>
   );

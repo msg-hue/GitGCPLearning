@@ -690,3 +690,29 @@ export async function deletePayment(id) {
     method: 'DELETE',
   });
 }
+
+/**
+ * getCustomerStatement
+ * Purpose: Fetch customer account statement with payment schedules and payment history.
+ * Inputs:
+ *  - id: string customer identifier
+ * Outputs:
+ *  - Returns statement object with schedules and payments
+ */
+export async function getCustomerStatement(id) {
+  if (!id) throw new Error('Customer id is required');
+  return fetchJson(`/api/Customers/${encodeURIComponent(id)}/statement`);
+}
+
+/**
+ * getAccountRecordByPlanId
+ * Purpose: Fetch account record for a payment plan with all related schedule entries.
+ * Inputs:
+ *  - planId: string payment plan identifier
+ * Outputs:
+ *  - Returns AccountRecord object containing plan details, schedule entries, and summary
+ */
+export async function getAccountRecordByPlanId(planId) {
+  if (!planId) throw new Error('Plan ID is required');
+  return fetchJson(`/api/PaymentPlans/${encodeURIComponent(planId)}/account-record`);
+}

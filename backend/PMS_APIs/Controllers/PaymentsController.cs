@@ -479,6 +479,127 @@ namespace PMS_APIs.Controllers
         }
 
         /// <summary>
+        /// Generate payments for the first 25 customers based on their payment schedules
+        /// </summary>
+        /// <returns>List of generated payments</returns>
+        [HttpPost("generate-for-customers")]
+        public async Task<ActionResult> GeneratePaymentsForCustomers()
+        {
+            try
+            {
+                // Get first 25 customers with their planId
+                var customers = await _context.Customers
+                    .Where(c => c.PlanId != null)
+                    .OrderBy(c => c.CustomerId)
+                    .Take(25)
+                    .ToListAsync();
+
+                if (!customers.Any())
+                {
+                    return BadRequest(new { message = "No customers with payment plans found" });
+                }
+
+                var generatedPayments = new List<object>();
+                var paymentMethods = new[] { "Bank Transfer", "Cash", "Cheque", "Online Payment" };
+                var random = new Random();
+
+                // Get the starting payment ID number
+                var lastPayment = await _context.Payments
+                    .OrderByDescending(p => p.PaymentId)
+                    .FirstOrDefaultAsync();
+
+                int nextPaymentNumber = 1;
+                if (lastPayment != null)
+                {
+                    var lastIdStr = lastPayment.PaymentId.Trim();
+                    if (lastIdStr.StartsWith("PAY", StringComparison.OrdinalIgnoreCase))
+                    {
+                        var numericPart = lastIdStr.Substring(3).TrimStart('0');
+                        if (int.TryParse(numericPart, out var lastIdNumber))
+                        {
+                            nextPaymentNumber = lastIdNumber + 1;
+                        }
+                    }
+                }
+
+                foreach (var customer in customers)
+                {
+                    // Get payment schedules for this customer's plan
+                    var schedules = await _context.PaymentSchedules
+                        .Where(s => s.PlanId == customer.PlanId)
+                        .OrderBy(s => s.InstallmentNo)
+                        .ToListAsync();
+
+                    foreach (var schedule in schedules)
+                    {
+                        // Check if payment already exists for this schedule and customer
+                        var existingPayment = await _context.Payments
+                            .FirstOrDefaultAsync(p => p.CustomerId == customer.CustomerId && p.ScheduleId == schedule.ScheduleId);
+
+                        if (existingPayment != null)
+                        {
+                            continue; // Skip if payment already exists
+                        }
+
+                        // Generate payment ID using sequential number
+                        var paymentId = $"PAY{nextPaymentNumber:D7}";
+                        nextPaymentNumber++;
+
+                        // Calculate payment date (due date + random 0-5 days)
+                        var paymentDate = schedule.DueDate?.AddDays(random.Next(0, 6)) ?? DateTime.UtcNow;
+
+                        // Create payment
+                        var payment = new Payment
+                        {
+                            PaymentId = paymentId,
+                            ScheduleId = schedule.ScheduleId,
+                            CustomerId = customer.CustomerId,
+                            PaymentDate = DateTime.SpecifyKind(paymentDate, DateTimeKind.Utc),
+                            Amount = schedule.Amount,
+                            Method = paymentMethods[random.Next(paymentMethods.Length)],
+                            ReferenceNo = $"REF-{customer.CustomerId}-{schedule.ScheduleId}",
+                            Status = "Paid",
+                            Remarks = $"Payment for {schedule.PaymentDescription ?? $"Installment #{schedule.InstallmentNo}"}"
+                        };
+
+                        _context.Payments.Add(payment);
+
+                        generatedPayments.Add(new
+                        {
+                            PaymentId = payment.PaymentId,
+                            CustomerName = customer.FullName,
+                            CustomerId = customer.CustomerId,
+                            ScheduleId = schedule.ScheduleId,
+                            PaymentAmount = payment.Amount,
+                            PaymentDate = payment.PaymentDate?.ToString("yyyy-MM-dd"),
+                            Method = payment.Method,
+                            ReferenceNo = payment.ReferenceNo,
+                            Status = payment.Status
+                        });
+                    }
+                }
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new
+                {
+                    message = $"Generated {generatedPayments.Count} payments for {customers.Count} customers",
+                    totalCustomers = customers.Count,
+                    totalPayments = generatedPayments.Count,
+                    payments = generatedPayments
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { 
+                    message = "Error generating payments", 
+                    error = ex.Message,
+                    details = ex.InnerException?.Message ?? ""
+                });
+            }
+        }
+
+        /// <summary>
         /// Get payment statistics
         /// </summary>
         /// <returns>Payment statistics</returns>

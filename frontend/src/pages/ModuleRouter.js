@@ -95,6 +95,7 @@ export default function ModuleRouter() {
     },
     allotment: {
       '': React.lazy(() => import('./Allotment')),
+      'all-allotments': React.lazy(() => import('./allotment/AllAllotments')),
     },
     property: {
       projects: React.lazy(() => import('./property/Projects')),

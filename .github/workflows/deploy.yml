@@ -1,0 +1,34 @@
+name: Deploy Full App
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 1. Copy the entire monorepo to the VM
+      - name: Upload project to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          source: "."
+          target: "~/apps/pms"
+
+      # 2. Run deployment script on the VM
+      - name: Run deploy script on server
+        uses: appleboy/ssh-action@v0.1.8
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USER }}
+          key: ${{ secrets.VM_SSH_KEY }}
+          script: |
+            chmod +x ~/apps/pms/deploy-vm.sh
+            bash ~/apps/pms/deploy-vm.sh
