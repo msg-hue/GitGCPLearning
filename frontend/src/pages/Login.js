@@ -96,7 +96,7 @@ export default function Login() {
     <Wrapper>
       <Card>
         <BrandTitle>Login PMS</BrandTitle>
-        <Subtitle>Please sign in to continue</Subtitle>
+        <Subtitle>Please sign in to continue...</Subtitle>
         {error && <ErrorBox role="alert">{error}</ErrorBox>}
         {loading && <InfoBox>Connecting to server...</InfoBox>}
         <Form onSubmit={handleSubmit}>
