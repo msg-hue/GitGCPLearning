@@ -17,17 +17,17 @@ jobs:
         key: ${{ secrets.GCP_SSH_KEY }}
         script: |
           cd ~/GitGCPLearning
-          git pull origin main
+          git pull https://github.com/msg-hue/GitGCPLearning.git main
           
           # Backend
           cd ~/GitGCPLearning/backend/PMS_APIs
           dotnet build
-          pkill -f "dotnet run"
+          pkill -f "dotnet run" || true
           nohup dotnet run --urls "http://0.0.0.0:5009" > ~/backend.log 2>&1 &
           
           # Frontend
           cd ~/GitGCPLearning/frontend
           npm install
           npm run build
-          pkill -f "serve"
+          pkill -f "serve" || true
           nohup serve -s build -l 5010 > ~/frontend.log 2>&1 &
