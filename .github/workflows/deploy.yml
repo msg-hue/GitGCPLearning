@@ -1,34 +1,33 @@
-name: Deploy Full App
+name: Deploy to GCP
 
 on:
   push:
-    branches: ["main"]
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-
-      # 1. Copy the entire monorepo to the VM
-      - name: Upload project to server
-        uses: appleboy/scp-action@v0.1.4
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          source: "."
-          target: "~/apps/pms"
-
-      # 2. Run deployment script on the VM
-      - name: Run deploy script on server
-        uses: appleboy/ssh-action@v0.1.8
-        with:
-          host: ${{ secrets.VM_HOST }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            chmod +x ~/apps/pms/deploy-vm.sh
-            bash ~/apps/pms/deploy-vm.sh
+    - name: Deploy to VM
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.GCP_HOST }}
+        username: ${{ secrets.GCP_USERNAME }}
+        key: ${{ secrets.GCP_SSH_KEY }}
+        script: |
+          cd ~/GitGCPLearning
+          git pull origin main
+          
+          # Backend
+          cd ~/GitGCPLearning/backend/PMS_APIs
+          dotnet build
+          pkill -f "dotnet run"
+          nohup dotnet run --urls "http://0.0.0.0:5009" > ~/backend.log 2>&1 &
+          
+          # Frontend
+          cd ~/GitGCPLearning/frontend
+          npm install
+          npm run build
+          pkill -f "serve"
+          nohup serve -s build -l 5010 > ~/frontend.log 2>&1 &
