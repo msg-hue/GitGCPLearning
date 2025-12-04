@@ -43,88 +43,129 @@ namespace PMS_APIs.Controllers
         /// <returns>JWT token and user information if authentication succeeds</returns>
         [HttpPost("login")]
         [AllowAnonymous]
-        public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto loginRequest)
+        public async Task<ActionResult<LoginResponseDto>> Login([FromBody] LoginRequestDto? loginRequest)
         {
             try
             {
-                // Validate input
+                // Log the received request for debugging
+                Console.WriteLine($"[AuthController] Login request received. ModelState.IsValid: {ModelState.IsValid}");
+                if (loginRequest != null)
+                {
+                    Console.WriteLine($"[AuthController] LoginRequestDto received - Email: {loginRequest.Email}, Password: {(string.IsNullOrEmpty(loginRequest.Password) ? "empty" : "provided")}");
+                }
+                else
+                {
+                    Console.WriteLine($"[AuthController] LoginRequestDto is null - model binding failed");
+                }
+
+                // Validate input - check ModelState first
                 if (!ModelState.IsValid)
                 {
+                    Console.WriteLine($"[AuthController] ModelState validation failed:");
+                    foreach (var error in ModelState)
+                    {
+                        Console.WriteLine($"[AuthController]   {error.Key}: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+                    }
                     return BadRequest(new { message = "Invalid input data", errors = ModelState });
+                }
+
+                // Additional validation if loginRequest is null (shouldn't happen if ModelState is valid, but just in case)
+                if (loginRequest == null || string.IsNullOrWhiteSpace(loginRequest.Email))
+                {
+                    return BadRequest(new { message = "Email is required", errors = new { email = new[] { "The email field is required." } } });
                 }
 
                 // Normalize inputs to avoid whitespace/casing issues
                 var normalizedEmail = (loginRequest.Email ?? string.Empty).Trim().ToLower();
+                var password = loginRequest.Password ?? string.Empty;
 
-                // Find user by email (trim + lowercase on DB value to avoid trailing spaces mismatch)
+                // Log login attempt for debugging
+                Console.WriteLine($"[AuthController] Login attempt for email: {normalizedEmail}");
+
+                // Find user by email using Entity Framework
+                // PostgreSQL column names from database.txt: userid, fullname, email, passwordhash, roleid, isactive, createdat
+                // Simple plaintext password comparison - no hashing/encryption needed
                 User? user = null;
                 try
                 {
+                    Console.WriteLine($"[AuthController] Searching for user with email: {normalizedEmail}");
+                    
+                    // Use Entity Framework - User model now has correct PostgreSQL column names
                     user = await _context.Users
-                        .FirstOrDefaultAsync(u => (u.Email ?? string.Empty).Trim().ToLower() == normalizedEmail);
+                        .FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == normalizedEmail);
+                    
+                    if (user != null)
+                    {
+                        Console.WriteLine($"[AuthController] ✅ User found: {user.Email}");
+                        Console.WriteLine($"[AuthController]   UserId: {user.UserId}");
+                        Console.WriteLine($"[AuthController]   FullName: {user.FullName}");
+                        Console.WriteLine($"[AuthController]   IsActive: {user.IsActive}");
+                        Console.WriteLine($"[AuthController]   PasswordHash: '{user.PasswordHash}'");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"[AuthController] ❌ No user found with email: {normalizedEmail}");
+                    }
                 }
                 catch (Exception dbEx)
                 {
-                    // Log database connection errors for debugging
-                    Console.WriteLine($"[AuthController] Database query failed: {dbEx.Message}");
-                    Console.WriteLine($"[AuthController] Inner exception: {dbEx.InnerException?.Message}");
-                    
-                    // If EF lookup failed, attempt raw SQL lookup (helps when schema mismatch blocks EF mapping)
-                    try
+                    Console.WriteLine($"[AuthController] ❌ Database query failed: {dbEx.Message}");
+                    if (dbEx.InnerException != null)
                     {
-                        var conn = _context.Database.GetDbConnection();
-                        await conn.OpenAsync();
-                        using var cmd = conn.CreateCommand();
-                        cmd.CommandText = @"SELECT 
-                            COALESCE(userid, user_id) AS user_id,
-                            COALESCE(fullname, full_name) AS full_name,
-                            email,
-                            COALESCE(roleid, role_id) AS role_id,
-                            COALESCE(isactive, is_active) AS is_active,
-                            COALESCE(createdat, created_at) AS created_at
-                          FROM users 
-                          WHERE LOWER(TRIM(email)) = @email 
-                          LIMIT 1";
-                        var p = cmd.CreateParameter();
-                        p.ParameterName = "@email";
-                        p.Value = normalizedEmail;
-                        cmd.Parameters.Add(p);
-
-                        using var reader = await cmd.ExecuteReaderAsync(CommandBehavior.SingleRow);
-                        if (await reader.ReadAsync())
-                        {
-                            user = new User
-                            {
-                                UserId = reader["user_id"].ToString() ?? string.Empty,
-                                FullName = reader["full_name"].ToString() ?? string.Empty,
-                                Email = reader["email"].ToString() ?? string.Empty,
-                                RoleId = reader["role_id"] == DBNull.Value ? null : reader["role_id"].ToString(),
-                                IsActive = reader["is_active"] != DBNull.Value && Convert.ToBoolean(reader["is_active"]),
-                                CreatedAt = reader["created_at"] != DBNull.Value ? Convert.ToDateTime(reader["created_at"]) : DateTime.UtcNow,
-                                // PasswordHash may be unavailable in raw projection; leave as empty to force plaintext path
-                                PasswordHash = string.Empty
-                            };
-                        }
-                        await conn.CloseAsync();
+                        Console.WriteLine($"[AuthController] Inner exception: {dbEx.InnerException.Message}");
                     }
-                    catch (Exception sqlEx)
-                    {
-                        // Log raw SQL errors
-                        Console.WriteLine($"[AuthController] Raw SQL query also failed: {sqlEx.Message}");
-                        // Re-throw if it's a connection error so it can be handled by outer catch
-                        if (sqlEx.Message.Contains("transient") || sqlEx.Message.Contains("connection") || 
-                            sqlEx.Message.Contains("timeout") || sqlEx.Message.Contains("network"))
-                        {
-                            throw new Exception($"Database connection error: {sqlEx.Message}", sqlEx);
-                        }
-                        // Otherwise ignore and proceed with null user (will return 401)
-                    }
+                    throw new Exception($"Database error: {dbEx.Message}", dbEx);
                 }
 
                 if (user == null)
                 {
+                    Console.WriteLine($"[AuthController] Login failed: User not found for email: {normalizedEmail}");
                     return Unauthorized(new { message = "Invalid email or password" });
                 }
+
+                // Check if user is active
+                if (!user.IsActive)
+                {
+                    Console.WriteLine($"[AuthController] Login failed: User account is inactive for email: {normalizedEmail}");
+                    return Unauthorized(new { message = "User account is inactive. Please contact administrator." });
+                }
+
+                // Simple plaintext password comparison - NO hashing or encryption
+                // Compare email and passwordhash directly as stored in database
+                bool passwordValid = false;
+                
+                if (string.IsNullOrEmpty(password))
+                {
+                    Console.WriteLine($"[AuthController] ❌ No password provided");
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
+                
+                if (string.IsNullOrEmpty(user.PasswordHash))
+                {
+                    Console.WriteLine($"[AuthController] ❌ No passwordhash found in database for user: {user.Email}");
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
+                
+                // Simple direct comparison - passwordhash field contains plaintext password
+                // Trim both to handle any whitespace issues
+                var storedPassword = user.PasswordHash.Trim();
+                var providedPassword = password.Trim();
+                
+                passwordValid = storedPassword.Equals(providedPassword, StringComparison.Ordinal);
+                
+                Console.WriteLine($"[AuthController] Password comparison:");
+                Console.WriteLine($"[AuthController]   Email: {normalizedEmail}");
+                Console.WriteLine($"[AuthController]   Stored passwordhash: '{storedPassword}' (length: {storedPassword.Length})");
+                Console.WriteLine($"[AuthController]   Provided password: '{providedPassword}' (length: {providedPassword.Length})");
+                Console.WriteLine($"[AuthController]   Match: {passwordValid}");
+
+                if (!passwordValid)
+                {
+                    Console.WriteLine($"[AuthController] ❌ Login failed: Password does not match for email: {normalizedEmail}");
+                    return Unauthorized(new { message = "Invalid email or password" });
+                }
+
+                Console.WriteLine($"[AuthController] Login successful for user: {user.Email}");
 
                 
 
@@ -193,13 +234,15 @@ namespace PMS_APIs.Controllers
                         var conn = _context.Database.GetDbConnection();
                         await conn.OpenAsync();
                         using var cmd = conn.CreateCommand();
+                        // PostgreSQL column names from database.txt (no underscores)
                         cmd.CommandText = @"SELECT 
-                            COALESCE(userid, user_id) AS user_id,
-                            COALESCE(fullname, full_name) AS full_name,
+                            userid AS user_id,
+                            fullname AS full_name,
                             email,
-                            COALESCE(roleid, role_id) AS role_id,
-                            COALESCE(isactive, is_active) AS is_active,
-                            COALESCE(createdat, created_at) AS created_at
+                            passwordhash AS password_hash,
+                            roleid AS role_id,
+                            isactive AS is_active,
+                            createdat AS created_at
                           FROM users 
                           WHERE LOWER(TRIM(email)) = @email 
                           LIMIT 1";
@@ -257,6 +300,136 @@ namespace PMS_APIs.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "An error occurred during login", error = ex.Message, innerError = ex.InnerException?.Message });
+            }
+        }
+
+        /// <summary>
+        /// Debug endpoint to check if a user exists and view their details (development only)
+        /// </summary>
+        [HttpGet("debug-user/{email}")]
+        [AllowAnonymous]
+        public async Task<ActionResult> DebugUser(string email)
+        {
+            try
+            {
+                var normalizedEmail = (email ?? string.Empty).Trim().ToLower();
+                
+                // Use Entity Framework - User model has correct PostgreSQL column names
+                var user = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower().Trim() == normalizedEmail);
+                
+                if (user != null)
+                {
+                    return Ok(new
+                    {
+                        found = true,
+                        user = new
+                        {
+                            userId = user.UserId,
+                            fullName = user.FullName,
+                            email = user.Email,
+                            passwordHash = user.PasswordHash,
+                            passwordHashLength = user.PasswordHash?.Length ?? 0,
+                            roleId = user.RoleId,
+                            isActive = user.IsActive,
+                            createdAt = user.CreatedAt
+                        }
+                    });
+                }
+                else
+                {
+                    return Ok(new { found = false, message = $"No user found with email: {normalizedEmail}" });
+                }
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message, innerError = ex.InnerException?.Message });
+            }
+        }
+
+        /// <summary>
+        /// Creates a test user for development (only in development environment)
+        /// </summary>
+        [HttpPost("create-test-user")]
+        [AllowAnonymous]
+        public async Task<ActionResult<UserDto>> CreateTestUser([FromBody] CreateUserDto? createUserDto = null)
+        {
+            try
+            {
+                // Only allow in development
+                var env = _configuration["ASPNETCORE_ENVIRONMENT"] ?? "";
+                if (!env.Contains("Development", StringComparison.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { message = "This endpoint is only available in development environment" });
+                }
+
+                // Use provided data or defaults
+                var email = createUserDto?.Email ?? "admin@test.com";
+                var password = createUserDto?.Password ?? "admin123";
+                var fullName = createUserDto?.FullName ?? "Test Admin";
+
+                // Check if user already exists
+                var existingUser = await _context.Users
+                    .FirstOrDefaultAsync(u => u.Email.ToLower() == email.ToLower());
+
+                if (existingUser != null)
+                {
+                    return Ok(new { 
+                        message = "Test user already exists", 
+                        user = new UserDto
+                        {
+                            UserId = existingUser.UserId,
+                            FullName = existingUser.FullName,
+                            Email = existingUser.Email,
+                            RoleId = existingUser.RoleId,
+                            IsActive = existingUser.IsActive,
+                            CreatedAt = existingUser.CreatedAt
+                        }
+                    });
+                }
+
+                // Generate unique user ID
+                var userId = await GenerateUniqueUserId();
+
+                // Create new user with plaintext password (for MVP)
+                var user = new User
+                {
+                    UserId = userId,
+                    FullName = fullName,
+                    Email = email,
+                    PasswordHash = password, // Store as plaintext for MVP
+                    RoleId = createUserDto?.RoleId,
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync();
+
+                var userDto = new UserDto
+                {
+                    UserId = user.UserId,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    RoleId = user.RoleId,
+                    IsActive = user.IsActive,
+                    CreatedAt = user.CreatedAt
+                };
+
+                return Ok(new { 
+                    message = "Test user created successfully", 
+                    user = userDto,
+                    loginCredentials = new { email, password }
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new
+                {
+                    message = "An error occurred while creating test user",
+                    error = ex.Message,
+                    innerError = ex.InnerException?.Message
+                });
             }
         }
 
@@ -528,11 +701,10 @@ namespace PMS_APIs.Controllers
                 await conn.OpenAsync();
                 using var cmd = conn.CreateCommand();
                 // Read plaintext from any common password column and handle user id variants.
-                // Supports: password (plaintext), passwordhash (plaintext), password_hash (plaintext)
-                // Matches by either userid or user_id.
+                // Supports both PostgreSQL (userid, passwordhash) and SQLite (user_id, password_hash) schemas
                 cmd.CommandText = @"SELECT COALESCE(password, passwordhash, password_hash) AS plain_password
                                      FROM users
-                                     WHERE (userid = @id OR user_id = @id)
+                                     WHERE (COALESCE(userid, user_id) = @id)
                                      LIMIT 1";
 
                 var p = cmd.CreateParameter();
@@ -546,9 +718,10 @@ namespace PMS_APIs.Controllers
                 if (result == null || result == DBNull.Value) return null;
                 return Convert.ToString(result);
             }
-            catch
+            catch (Exception ex)
             {
                 // If the column doesn't exist or any error occurs, treat as not available
+                Console.WriteLine($"[AuthController] TryGetLegacyPlainPassword failed: {ex.Message}");
                 return null;
             }
         }

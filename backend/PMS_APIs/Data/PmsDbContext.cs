@@ -78,6 +78,19 @@ namespace PMS_APIs.Data
                 .HasIndex(c => c.Email)
                 .IsUnique(false);
 
+            // PostgreSQL column names from database.txt - NO underscores
+            modelBuilder.Entity<User>(entity =>
+            {
+                entity.ToTable("users");
+                entity.Property(e => e.UserId).HasColumnName("userid");
+                entity.Property(e => e.FullName).HasColumnName("fullname");
+                entity.Property(e => e.Email).HasColumnName("email");
+                entity.Property(e => e.PasswordHash).HasColumnName("passwordhash");
+                entity.Property(e => e.RoleId).HasColumnName("roleid");
+                entity.Property(e => e.IsActive).HasColumnName("isactive");
+                entity.Property(e => e.CreatedAt).HasColumnName("createdat");
+            });
+
             // Explicitly configure table names to match database (singular)
             modelBuilder.Entity<Property>()
                 .ToTable("property");

@@ -13,10 +13,10 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
+        // Accept camelCase from frontend (JavaScript convention)
+        options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
         // Allow case-insensitive property matching (accepts both camelCase and PascalCase)
         options.JsonSerializerOptions.PropertyNameCaseInsensitive = true;
-        // Keep PascalCase for JSON (matches C# DTOs)
-        options.JsonSerializerOptions.PropertyNamingPolicy = null;
         // Allow reading comments and trailing commas
         options.JsonSerializerOptions.ReadCommentHandling = System.Text.Json.JsonCommentHandling.Skip;
         options.JsonSerializerOptions.AllowTrailingCommas = true;

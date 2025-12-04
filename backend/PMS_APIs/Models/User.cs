@@ -14,6 +14,7 @@ namespace PMS_APIs.Models
         /// Unique identifier for the user (10 characters)
         /// Primary key for the users table
         /// </summary>
+        // PostgreSQL column names from database.txt - NO underscores
         [Key]
         [Column("userid")]
         [StringLength(10)]
@@ -40,7 +41,7 @@ namespace PMS_APIs.Models
         public string Email { get; set; } = string.Empty;
 
         /// <summary>
-        /// Hashed password for user authentication
+        /// Password stored as plaintext (no hashing required)
         /// Maximum length of 256 characters
         /// </summary>
         [Column("passwordhash")]
