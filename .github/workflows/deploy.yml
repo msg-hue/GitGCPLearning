@@ -22,12 +22,16 @@ jobs:
           # Backend
           cd ~/GitGCPLearning/backend/PMS_APIs
           dotnet build
-          pkill -f "dotnet run" || true
+          pkill -f "PMS_APIs --urls" || true
           nohup dotnet run --urls "http://0.0.0.0:5009" > ~/backend.log 2>&1 &
+          sleep 2
           
           # Frontend
           cd ~/GitGCPLearning/frontend
           npm install
           npm run build
-          pkill -f "serve" || true
+          pkill -f "serve.*5010" || true
           nohup serve -s build -l 5010 > ~/frontend.log 2>&1 &
+          sleep 2
+          
+          echo "Deployment completed successfully!"
