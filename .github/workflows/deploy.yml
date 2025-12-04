@@ -15,27 +15,5 @@ jobs:
         host: ${{ secrets.GCP_HOST }}
         username: ${{ secrets.GCP_USERNAME }}
         key: ${{ secrets.GCP_SSH_KEY }}
-        command_timeout: 30m
         script: |
-          set -e
-          cd ~/GitGCPLearning
-          git pull https://github.com/msg-hue/GitGCPLearning.git main
-          
-          # Backend
-          cd ~/GitGCPLearning/backend/PMS_APIs
-          dotnet build
-          pkill -f "PMS_APIs --urls" || true
-          sleep 2
-          setsid dotnet run --urls "http://0.0.0.0:5009" > ~/backend.log 2>&1 < /dev/null &
-          
-          # Frontend
-          cd ~/GitGCPLearning/frontend
-          npm install
-          npm run build
-          pkill -f "serve.*5010" || true
-          sleep 2
-          setsid serve -s build -l 5010 > ~/frontend.log 2>&1 < /dev/null &
-          
-          sleep 3
-          echo "Deployment completed!"
-          exit 0
+          bash ~/deploy.sh > ~/deploy-output.log 2>&1 &
