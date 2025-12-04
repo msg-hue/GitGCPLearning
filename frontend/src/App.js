@@ -17,6 +17,9 @@ import ModuleRouter from './pages/ModuleRouter';
 import RequireAuth from './components/RequireAuth';
 import PaymentPlanDetails from './pages/schedule/PaymentPlanDetails';
 import CustomerPayments from './pages/payments/CustomerPayments';
+import ProjectFormPage from './pages/property/ProjectFormPage';
+import PaymentFormPage from './pages/payments/PaymentFormPage';
+import CustomerFormPage from './pages/customers/CustomerFormPage';
 
 function App() {
   return (
@@ -46,6 +49,18 @@ function App() {
               {/* Explicit detail routes */}
               <Route path="schedule/payment-plans/:planId" element={<PaymentPlanDetails />} />
               <Route path="payments/customer/:customerId" element={<CustomerPayments />} />
+              {/* Project form routes - full page view */}
+              <Route path="property/projects/new" element={<ProjectFormPage />} />
+              <Route path="property/projects/:projectId" element={<ProjectFormPage />} />
+              <Route path="property/projects/:projectId/edit" element={<ProjectFormPage />} />
+              {/* Payment form routes - full page view */}
+              <Route path="payments/collections/new" element={<PaymentFormPage />} />
+              <Route path="payments/collections/:paymentId" element={<PaymentFormPage />} />
+              <Route path="payments/collections/:paymentId/edit" element={<PaymentFormPage />} />
+              {/* Customer form routes - full page view */}
+              <Route path="customers/all-customers/new" element={<CustomerFormPage />} />
+              <Route path="customers/all-customers/:customerId" element={<CustomerFormPage />} />
+              <Route path="customers/all-customers/:customerId/edit" element={<CustomerFormPage />} />
             </Route>
           </Route>
           

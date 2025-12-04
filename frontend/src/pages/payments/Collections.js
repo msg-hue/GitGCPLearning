@@ -1,10 +1,9 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import {
   getCustomer,
   getPayments,
-  createPayment,
-  updatePayment,
   deletePayment,
 } from '../../utils/api';
 
@@ -129,23 +128,6 @@ const ModalTitle = styled.h3`
   margin: 0 0 0.75rem;
   color: ${p => p.theme.colors.secondary};
 `;
-const ModalRow = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-  }
-`;
-const ModalTextarea = styled.textarea`
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  padding: 0.4rem 0.6rem;
-  width: 100%;
-  min-height: 70px;
-  font-family: 'Lexend', sans-serif;
-`;
 const ModalActions = styled.div`
   display: flex;
   gap: 0.5rem;
@@ -153,19 +135,10 @@ const ModalActions = styled.div`
   margin-top: 0.5rem;
 `;
 
-const emptyForm = {
-  scheduleId: '',
-  paymentDate: '',
-  amount: '',
-  method: '',
-  referenceNo: '',
-  status: '',
-  remarks: '',
-};
+// Note: ModalOverlay, ModalCard, ModalTitle, ModalActions are still used for delete confirmation
 
 const normalizePayment = (p) => {
   const paymentId = p.paymentId ?? p.PaymentId ?? p.paymentid;
-  const scheduleId = p.scheduleId ?? p.ScheduleId ?? p.scheduleid;
   const customerId = p.customerId ?? p.CustomerId ?? p.customerid;
   const paymentDate = p.paymentDate ?? p.PaymentDate ?? p.paymentdate;
   const amount = p.amount ?? p.Amount;
@@ -175,7 +148,6 @@ const normalizePayment = (p) => {
   const remarks = p.remarks ?? p.Remarks ?? p.description ?? p.Description;
   return {
     paymentId,
-    scheduleId,
     customerId,
     paymentDate,
     amount,
@@ -192,6 +164,7 @@ const normalizePayment = (p) => {
  * Purpose: Payments collections CRUD tied to customers/payments table.
  */
 export default function Collections() {
+  const navigate = useNavigate();
   const [customerInput, setCustomerInput] = useState('');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -202,12 +175,7 @@ export default function Collections() {
   const [paymentsError, setPaymentsError] = useState('');
   const [notice, setNotice] = useState('');
 
-  const [form, setForm] = useState(emptyForm);
-  const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
-  const [addOpen, setAddOpen] = useState(false);
-  const [editOpen, setEditOpen] = useState(false);
-  const [activePaymentId, setActivePaymentId] = useState('');
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [confirmingDelete, setConfirmingDelete] = useState(false);
@@ -267,99 +235,35 @@ export default function Collections() {
     }
   };
 
+  /**
+   * openAdd - Navigate to the create payment page
+   */
   const openAdd = () => {
     if (!selectedCustomerId) {
       setSearchError('Search for a customer before creating payments');
       return;
     }
-    setForm({
-      ...emptyForm,
-      paymentDate: new Date().toISOString().slice(0, 10),
-      method: 'Cash',
-      status: 'Received',
-    });
-    setFormError('');
-    setAddOpen(true);
+    navigate(`/payments/collections/new?customerId=${selectedCustomerId}`);
   };
 
+  /**
+   * openEdit - Navigate to the edit payment page
+   */
   const openEdit = (payment) => {
     const norm = normalizePayment(payment);
-    setActivePaymentId(String(norm.paymentId || ''));
-    setForm({
-      scheduleId: norm.scheduleId ?? '',
-      paymentDate: norm.paymentDate ? String(norm.paymentDate).slice(0, 10) : '',
-      amount: norm.amount ?? '',
-      method: norm.method ?? '',
-      referenceNo: norm.referenceNo ?? '',
-      status: norm.status ?? '',
-      remarks: norm.remarks ?? '',
-    });
-    setFormError('');
-    setEditOpen(true);
+    const id = String(norm.paymentId || '').trim();
+    if (!id) return;
+    navigate(`/payments/collections/${id}/edit`);
   };
 
-  const validateForm = () => {
-    if (!selectedCustomerId) {
-      setFormError('Customer is required');
-      return false;
-    }
-    if (!form.paymentDate) {
-      setFormError('Payment date is required');
-      return false;
-    }
-    if (form.amount === '' || Number.isNaN(Number(form.amount)) || Number(form.amount) <= 0) {
-      setFormError('Amount must be a positive number');
-      return false;
-    }
-    return true;
-  };
-
-  const buildPayload = () => ({
-    CustomerId: String(selectedCustomerId).trim(),
-    ScheduleId: form.scheduleId ? String(form.scheduleId).trim() : null,
-    PaymentDate: form.paymentDate || null,
-    Amount: Number(form.amount),
-    Method: form.method ? String(form.method).trim() : null,
-    ReferenceNo: form.referenceNo ? String(form.referenceNo).trim() : null,
-    Status: form.status ? String(form.status).trim() : null,
-    Remarks: form.remarks ? String(form.remarks).trim() : null,
-  });
-
-  const saveNewPayment = async () => {
-    if (!validateForm()) return;
-    setSaving(true);
-    setFormError('');
-    try {
-      await createPayment(buildPayload());
-      setAddOpen(false);
-      setNotice('Payment recorded successfully');
-      await fetchPayments();
-    } catch (e) {
-      setFormError(e.message || 'Failed to create payment');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveEditPayment = async () => {
-    if (!validateForm()) return;
-    const id = String(activePaymentId || '').trim();
-    if (!id) {
-      setFormError('Missing payment ID for update');
-      return;
-    }
-    setSaving(true);
-    setFormError('');
-    try {
-      await updatePayment(id, { PaymentId: id, ...buildPayload() });
-      setEditOpen(false);
-      setNotice('Payment updated successfully');
-      await fetchPayments();
-    } catch (e) {
-      setFormError(e.message || 'Failed to update payment');
-    } finally {
-      setSaving(false);
-    }
+  /**
+   * openView - Navigate to the view payment page (for double-click)
+   */
+  const openView = (payment) => {
+    const norm = normalizePayment(payment);
+    const id = String(norm.paymentId || '').trim();
+    if (!id) return;
+    navigate(`/payments/collections/${id}`);
   };
 
   const confirmDelete = (payment) => {
@@ -428,7 +332,6 @@ export default function Collections() {
         <thead>
           <tr>
             <Th>Payment ID</Th>
-            <Th>Schedule ID</Th>
             <Th>Date</Th>
             <Th>Amount</Th>
             <Th>Method</Th>
@@ -440,14 +343,18 @@ export default function Collections() {
         </thead>
         <tbody>
           {loadingPayments ? (
-            <tr><Td colSpan={9}>Loading…</Td></tr>
+            <tr><Td colSpan={8}>Loading…</Td></tr>
           ) : payments.length === 0 ? (
-            <tr><Td colSpan={9}>No payments found. Search for a customer to get started.</Td></tr>
+            <tr><Td colSpan={8}>No payments found. Search for a customer to get started.</Td></tr>
           ) : (
             payments.map(payment => (
-              <tr key={payment.paymentId}>
+              <tr 
+                key={payment.paymentId}
+                onDoubleClick={() => openView(payment)}
+                style={{ cursor: 'pointer' }}
+                title="Double-click to view details"
+              >
                 <Td>{payment.paymentId}</Td>
-                <Td>{payment.scheduleId || '-'}</Td>
                 <Td>{payment.paymentDate ? String(payment.paymentDate).slice(0, 10) : '-'}</Td>
                 <Td>{payment.amount ?? '-'}</Td>
                 <Td>{payment.method ?? '-'}</Td>
@@ -456,8 +363,8 @@ export default function Collections() {
                 <Td>{payment.remarks ?? '-'}</Td>
                 <Td>
                   <TableActions>
-                    <SecondaryButton onClick={() => openEdit(payment)}>Edit</SecondaryButton>
-                    <DangerButton onClick={() => confirmDelete(payment)}>Delete</DangerButton>
+                    <SecondaryButton onClick={(e) => { e.stopPropagation(); openEdit(payment); }}>Edit</SecondaryButton>
+                    <DangerButton onClick={(e) => { e.stopPropagation(); confirmDelete(payment); }}>Delete</DangerButton>
                   </TableActions>
                 </Td>
               </tr>
@@ -465,57 +372,6 @@ export default function Collections() {
           )}
         </tbody>
       </Grid>
-
-      {(addOpen || editOpen) && (
-        <ModalOverlay>
-          <ModalCard>
-            <ModalTitle>{addOpen ? 'Add Payment' : 'Edit Payment'}</ModalTitle>
-            {formError && <Message>{formError}</Message>}
-            <ModalRow>
-              <div>
-                <Label>Schedule ID (optional)</Label>
-                <Input value={form.scheduleId} onChange={e => setForm({ ...form, scheduleId: e.target.value })} />
-              </div>
-              <div>
-                <Label>Payment Date</Label>
-                <Input type="date" value={form.paymentDate} onChange={e => setForm({ ...form, paymentDate: e.target.value })} />
-              </div>
-            </ModalRow>
-            <ModalRow>
-              <div>
-                <Label>Amount</Label>
-                <Input type="number" step="0.01" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
-              </div>
-              <div>
-                <Label>Method</Label>
-                <Input value={form.method} onChange={e => setForm({ ...form, method: e.target.value })} placeholder="e.g., Cash, Bank" />
-              </div>
-            </ModalRow>
-            <ModalRow>
-              <div>
-                <Label>Reference #</Label>
-                <Input value={form.referenceNo} onChange={e => setForm({ ...form, referenceNo: e.target.value })} />
-              </div>
-              <div>
-                <Label>Status</Label>
-                <Input value={form.status} onChange={e => setForm({ ...form, status: e.target.value })} placeholder="e.g., Received" />
-              </div>
-            </ModalRow>
-            <div>
-              <Label>Remarks</Label>
-              <ModalTextarea value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} />
-            </div>
-            <ModalActions>
-              <Button onClick={() => { setAddOpen(false); setEditOpen(false); }} style={{ background: '#777' }}>
-                Cancel
-              </Button>
-              <Button onClick={addOpen ? saveNewPayment : saveEditPayment} disabled={saving}>
-                {saving ? 'Saving…' : 'Save'}
-              </Button>
-            </ModalActions>
-          </ModalCard>
-        </ModalOverlay>
-      )}
 
       {confirmingDelete && (
         <ModalOverlay>
