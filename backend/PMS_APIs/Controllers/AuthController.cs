@@ -57,12 +57,19 @@ namespace PMS_APIs.Controllers
                 var normalizedEmail = (loginRequest.Email ?? string.Empty).Trim().ToLower();
 
                 // Find user by email (trim + lowercase on DB value to avoid trailing spaces mismatch)
-                var user = await _context.Users
-                    .FirstOrDefaultAsync(u => (u.Email ?? string.Empty).Trim().ToLower() == normalizedEmail);
-
-                // If EF lookup failed, attempt raw SQL lookup (helps when schema mismatch blocks EF mapping)
-                if (user == null)
+                User? user = null;
+                try
                 {
+                    user = await _context.Users
+                        .FirstOrDefaultAsync(u => (u.Email ?? string.Empty).Trim().ToLower() == normalizedEmail);
+                }
+                catch (Exception dbEx)
+                {
+                    // Log database connection errors for debugging
+                    Console.WriteLine($"[AuthController] Database query failed: {dbEx.Message}");
+                    Console.WriteLine($"[AuthController] Inner exception: {dbEx.InnerException?.Message}");
+                    
+                    // If EF lookup failed, attempt raw SQL lookup (helps when schema mismatch blocks EF mapping)
                     try
                     {
                         var conn = _context.Database.GetDbConnection();
@@ -100,9 +107,17 @@ namespace PMS_APIs.Controllers
                         }
                         await conn.CloseAsync();
                     }
-                    catch
+                    catch (Exception sqlEx)
                     {
-                        // Ignore raw SQL errors and proceed with null user (will return 401)
+                        // Log raw SQL errors
+                        Console.WriteLine($"[AuthController] Raw SQL query also failed: {sqlEx.Message}");
+                        // Re-throw if it's a connection error so it can be handled by outer catch
+                        if (sqlEx.Message.Contains("transient") || sqlEx.Message.Contains("connection") || 
+                            sqlEx.Message.Contains("timeout") || sqlEx.Message.Contains("network"))
+                        {
+                            throw new Exception($"Database connection error: {sqlEx.Message}", sqlEx);
+                        }
+                        // Otherwise ignore and proceed with null user (will return 401)
                     }
                 }
 
@@ -136,7 +151,27 @@ namespace PMS_APIs.Controllers
             }
             catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred during login", error = ex.Message, innerError = ex.InnerException?.Message });
+                // Log the full exception for debugging
+                Console.WriteLine($"[AuthController] Login error: {ex.Message}");
+                Console.WriteLine($"[AuthController] Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[AuthController] Inner exception: {ex.InnerException.Message}");
+                }
+                
+                // Provide more specific error messages
+                var errorMessage = ex.Message;
+                if (errorMessage.Contains("transient") || errorMessage.Contains("connection") || 
+                    errorMessage.Contains("timeout") || errorMessage.Contains("network"))
+                {
+                    errorMessage = "Database connection error. Please check if the database is accessible and try again.";
+                }
+                
+                return StatusCode(500, new { 
+                    message = "An error occurred during login", 
+                    error = errorMessage, 
+                    innerError = ex.InnerException?.Message
+                });
             }
         }
 

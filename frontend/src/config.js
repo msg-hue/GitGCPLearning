@@ -8,8 +8,8 @@
  * - If running on localhost, prefer localhost backend to avoid CORS issues
  * - Otherwise, fall back to hosted backend
  */
-const HOSTED_API_URL = 'http://34.31.174.65:5002';
-const LOCAL_API_URL = 'http://localhost:5296'; // Local backend port
+const HOSTED_API_URL = 'http://34.10.136.234:5009';
+const LOCAL_API_URL = 'http://localhost:5000'; // Local backend port
 
 // Determine which backend to use
 let apiUrl;
@@ -59,9 +59,9 @@ if (process.env.NODE_ENV === 'development' || window.location.hostname === 'loca
       console.error('[Config] This is likely a CORS or network issue. Check:');
       if (API_BASE_URL.includes('localhost')) {
         console.error('[Config] 1. Is the local backend running? Start it with: cd backend/PMS_APIs && dotnet run');
-        console.error('[Config] 2. The backend should be running on http://localhost:5296');
+        console.error('[Config] 2. The backend should be running on http://localhost:5000');
       } else {
-        console.error('[Config] 1. Is the backend running on port 5002?');
+        console.error('[Config] 1. Is the backend running on port 5009?');
         console.error('[Config] 2. Is CORS configured to allow', window.location.origin, '?');
       }
     });

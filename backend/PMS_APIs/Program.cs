@@ -121,8 +121,11 @@ builder.Services.AddCors(options =>
                 // Allow any localhost or 127.0.0.1 origin for development
                 if (uri.Host == "localhost" || uri.Host == "127.0.0.1")
                     return true;
-                // Allow production IPs
-                if (uri.Host == "34.31.174.65")
+                // Allow production IPs (Google Cloud)
+                if (uri.Host == "34.31.174.65" || uri.Host == "34.10.136.234")
+                    return true;
+                // Allow any IP in the 34.x.x.x range (Google Cloud internal network)
+                if (uri.Host.StartsWith("34."))
                     return true;
                 return false;
             })
